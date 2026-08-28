@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Telugu strings.
+
+  Written as natural Telugu rather than a word-for-word rendering of the
+  English: "eating window" becomes "ఆహారం తీసుకునే సమయం" (the time during which
+  food is taken), because a literal "window" would read as a window in a wall.
+
+  Product names (NutriLens) and units (g, ml, kcal) stay in Latin script, which
+  is how they are written and read in Telugu technical text.
+
+  Every key from values/strings.xml is present. A missing key would silently
+  fall back to English mid-screen.
+-->
+<resources>
+    <string name="app_name">NutriLens</string>
+    <string name="app_tagline">మీ భోజనాన్ని ఫోటో తీయండి. మీ భోజనాన్ని తెలుసుకోండి.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">NutriLens</string>
+    <string name="onboarding_subtitle">మీ భోజనాన్ని తెలుసుకోండి.\nమీ ఆహారపు అలవాట్లను తెలుసుకోండి.</string>
+    <string name="onboarding_body">భోజనం ఫోటో తీయండి. పళ్ళెంలో ఏమి ఉంది, ఎంత ఉంది అనేది NutriLens అంచనా వేస్తుంది. ప్రతి అంకె ఒక అంచనా మాత్రమే — మీరు దాన్ని సరిచేయవచ్చు.</string>
+    <string name="onboarding_get_started">ప్రారంభించండి</string>
+    <string name="onboarding_sign_in">నాకు ఇప్పటికే ఖాతా ఉంది</string>
+
+    <!-- Authentication -->
+    <string name="auth_sign_in_title">సైన్ ఇన్</string>
+    <string name="auth_sign_up_title">మీ ఖాతాను సృష్టించండి</string>
+    <string name="auth_email">ఇమెయిల్</string>
+    <string name="auth_password">పాస్‌వర్డ్</string>
+    <string name="auth_display_name">పేరు (ఐచ్ఛికం)</string>
+    <string name="auth_sign_in">సైన్ ఇన్</string>
+    <string name="auth_sign_up">ఖాతా సృష్టించండి</string>
+    <string name="auth_switch_to_sign_up">ఖాతా కావాలా? కొత్తది సృష్టించండి</string>
+    <string name="auth_switch_to_sign_in">ఇప్పటికే నమోదు అయ్యారా? సైన్ ఇన్ చేయండి</string>
+    <string name="auth_error_email_required">మీ ఇమెయిల్ చిరునామాను నమోదు చేయండి.</string>
+    <string name="auth_error_email_invalid">ఇది సరైన ఇమెయిల్ చిరునామాలా కనిపించడం లేదు.</string>
+    <string name="auth_error_password_required">మీ పాస్‌వర్డ్‌ను నమోదు చేయండి.</string>
+    <string name="auth_error_password_too_short">కనీసం %1$d అక్షరాలు వాడండి.</string>
+    <string name="auth_error_invalid_credentials">ఇమెయిల్ లేదా పాస్‌వర్డ్ సరికాదు.</string>
+    <string name="auth_error_email_taken">ఈ ఇమెయిల్‌తో ఇప్పటికే ఒక ఖాతా ఉంది.</string>
+    <string name="auth_error_weak_password">మరింత బలమైన పాస్‌వర్డ్‌ను ఎంచుకోండి.</string>
+
+    <!-- Home -->
+    <string name="home_title">ఈ రోజు</string>
+    <string name="home_greeting">నమస్కారం, %1$s</string>
+    <string name="home_greeting_anonymous">నమస్కారం</string>
+    <string name="home_capture_meal">భోజనం ఫోటో తీయండి</string>
+    <string name="home_no_meals_title">ఈ రోజు ఇంకా భోజనం నమోదు కాలేదు</string>
+    <string name="home_no_meals_body">మీ తదుపరి భోజనం ఫోటో తీయండి. పళ్ళెంలో ఏమి ఉందో NutriLens అంచనా వేస్తుంది.</string>
+    <string name="home_meals_today">ఈ రోజు భోజనాలు</string>
+    <string name="home_recent_meals">ఇటీవలి భోజనాలు</string>
+    <string name="home_view_all">అన్నీ చూడండి</string>
+
+    <!-- Eating window -->
+    <string name="window_title">ఈ రోజు ఆహారం తీసుకున్న సమయం</string>
+    <string name="window_first_meal">మొదటి భోజనం</string>
+    <string name="window_last_meal">చివరి భోజనం</string>
+    <string name="window_eating_window">ఆహారం తీసుకున్న సమయం</string>
+    <string name="window_fasting_period">ఉపవాస సమయం</string>
+    <string name="window_meals">భోజనాలు</string>
+    <string name="window_not_enough_data">ఈ రోజు ఆహార సమయాన్ని చూడటానికి రెండవ భోజనాన్ని నమోదు చేయండి.</string>
+    <string name="window_no_meals">ఈ రోజు ఏ భోజనం నమోదు కాలేదు.</string>
+    <string name="window_duration_hours_minutes">%1$d గం %2$d ని</string>
+    <string name="window_content_description">ఆహార సమయం %1$s నుండి %2$s వరకు, %3$s. ఉపవాసం %4$s.</string>
+    <string name="window_empty_content_description">%1$s నాడు ఏ భోజనం నమోదు కాలేదు.</string>
+
+    <!-- Capture -->
+    <string name="capture_title">భోజనం ఫోటో</string>
+    <string name="capture_instruction">భోజనం మొత్తాన్ని ఫ్రేమ్ లోపల ఉంచండి.</string>
+    <string name="capture_hint_reference">పళ్ళెం లేదా తెలిసిన వస్తువు ఫ్రేమ్‌లో ఉంటే పరిమాణ అంచనా మెరుగవుతుంది.</string>
+    <string name="capture_shutter">ఫోటో తీయండి</string>
+    <string name="capture_shutter_content_description">మీ భోజనం ఫోటో తీయండి</string>
+    <string name="capture_permission_title">కెమెరా అనుమతి కావాలి</string>
+    <string name="capture_permission_body">భోజనాల ఫోటో తీయడానికి NutriLens కు కెమెరా అవసరం. సెట్టింగ్‌లలో మీరు అనుమతించే వరకు ఫోటోలు మీ ఫోన్‌లోనే ఉంటాయి.</string>
+    <string name="capture_permission_grant">కెమెరా అనుమతించండి</string>
+    <string name="capture_permission_denied">కెమెరా అనుమతి నిరాకరించబడింది. మీరు భోజనాలను చేతితో నమోదు చేయవచ్చు.</string>
+    <string name="capture_log_manually">భోజనాన్ని చేతితో నమోదు చేయండి</string>
+    <string name="capture_error">ఫోటో తీయడం సాధ్యం కాలేదు. మళ్ళీ ప్రయత్నించండి.</string>
+
+    <!-- Analysis -->
+    <string name="analysis_title">భోజనాన్ని విశ్లేషిస్తోంది</string>
+    <string name="analysis_step_detecting">ఆహార పదార్థాలను గుర్తిస్తోంది</string>
+    <string name="analysis_step_portions">పరిమాణాన్ని అంచనా వేస్తోంది</string>
+    <string name="analysis_step_nutrition">పోషక విలువలను లెక్కిస్తోంది</string>
+    <string name="analysis_in_progress_content_description">మీ భోజనం ఫోటోను విశ్లేషిస్తోంది</string>
+    <string name="analysis_results_title">మేము గుర్తించినవి</string>
+    <string name="analysis_estimate_notice">ఈ పరిమాణాలన్నీ ఒక ఫోటో ఆధారంగా వేసిన అంచనాలు మాత్రమే, కొలతలు కావు. తప్పుగా అనిపించినవి సరిచేయండి.</string>
+    <string name="analysis_no_food_title">ఆహారం ఏదీ కనిపించలేదు</string>
+    <string name="analysis_no_food_body">ఆ ఫోటోలో ఆహారం గుర్తించలేకపోయాము. మంచి వెలుతురులో మళ్ళీ ప్రయత్నించండి, లేదా పదార్థాలను మీరే చేర్చండి.</string>
+    <string name="analysis_offline_title">విశ్లేషణకు ఇంటర్నెట్ కావాలి</string>
+    <string name="analysis_offline_body">ఆహార గుర్తింపు మా సర్వర్‌లలో జరుగుతుంది. ఈ భోజనాన్ని ఇప్పుడు చేతితో నమోదు చేయండి, తర్వాత అది సర్వర్‌కు చేరుతుంది.</string>
+    <string name="analysis_failed">ఫోటోను విశ్లేషించడం సాధ్యం కాలేదు.</string>
+    <string name="analysis_retry">మళ్ళీ ప్రయత్నించండి</string>
+    <string name="analysis_save_meal">భోజనాన్ని సేవ్ చేయండి</string>
+    <string name="analysis_add_food">ఆహారం చేర్చండి</string>
+
+    <!-- Meal items -->
+    <string name="item_mass_grams">%1$s g</string>
+    <string name="item_volume_millilitres">%1$s ml</string>
+    <string name="item_estimated_mass">అంచనా %1$s g</string>
+    <string name="item_confidence_percent">%1$d%% నమ్మకం</string>
+    <string name="item_confidence_high">ఎక్కువ నమ్మకం</string>
+    <string name="item_confidence_medium">మధ్యస్థ నమ్మకం</string>
+    <string name="item_confidence_low">తక్కువ నమ్మకం</string>
+    <string name="item_confidence_content_description">%1$s, %2$d శాతం</string>
+    <string name="item_fallback_density_notice">ఈ రకమైన ఆహారానికి సాధారణ సాంద్రతతో అంచనా వేయబడింది.</string>
+    <string name="item_edit">మార్చండి</string>
+    <string name="item_remove">తీసివేయండి</string>
+    <string name="item_adjust_portion">పరిమాణం సరిచేయండి</string>
+    <string name="item_rename">ఆహారాన్ని మార్చండి</string>
+    <string name="item_corrected_by_you">మీరు సరిచేశారు</string>
+    <string name="item_category_solid">ఘనం</string>
+    <string name="item_category_semisolid">అర్ధఘనం</string>
+    <string name="item_category_liquid">ద్రవం</string>
+
+    <!-- Portion adjustment -->
+    <string name="portion_title">పరిమాణం సరిచేయండి</string>
+    <string name="portion_estimated_volume">అంచనా ఘనపరిమాణం</string>
+    <string name="portion_your_volume">మీ అంచనా</string>
+    <string name="portion_resulting_mass">ఇది సుమారు %1$s g</string>
+    <string name="portion_save">సేవ్ చేయండి</string>
+    <string name="portion_cancel">రద్దు చేయండి</string>
+    <string name="portion_invalid">1 నుండి 3000 ml మధ్య విలువను నమోదు చేయండి.</string>
+
+    <!-- Food picker -->
+    <string name="food_picker_title">ఆహారాన్ని మార్చండి</string>
+    <string name="food_picker_search">ఆహారాల కోసం వెతకండి</string>
+    <string name="food_picker_no_results">ఆ వెతుకులాటకు ఏ ఆహారం సరిపోలలేదు.</string>
+    <string name="food_picker_custom">\"%1$s\" అనే పేరునే వాడండి</string>
+
+    <!-- Timeline -->
+    <string name="timeline_title">కాలరేఖ</string>
+    <string name="timeline_empty_title">ఏ భోజనం నమోదు కాలేదు</string>
+    <string name="timeline_empty_body">మీరు నమోదు చేసిన భోజనాలు మీరు తిన్న క్రమంలో ఇక్కడ కనిపిస్తాయి.</string>
+    <string name="timeline_today">ఈ రోజు</string>
+    <string name="timeline_yesterday">నిన్న</string>
+
+    <!-- Analytics -->
+    <string name="analytics_title">అలవాట్లు</string>
+    <string name="analytics_range_week">7 రోజులు</string>
+    <string name="analytics_range_fortnight">14 రోజులు</string>
+    <string name="analytics_range_month">30 రోజులు</string>
+    <string name="analytics_mean_window">సగటు ఆహార సమయం</string>
+    <string name="analytics_mean_meals">రోజుకు సగటు భోజనాలు</string>
+    <string name="analytics_consistency">ఆహార సమయ స్థిరత్వం</string>
+    <string name="analytics_consistency_explainer">రోజు నుండి రోజుకు మీ ఆహార సమయం ఎంత ఒకేలా ఉందో చూపుతుంది. ఒకటి కంటే ఎక్కువ భోజనాలు ఉన్న కనీసం రెండు రోజులు అవసరం.</string>
+    <string name="analytics_consistency_unavailable">ఇంకా తగినన్ని రోజులు లేవు</string>
+    <string name="analytics_nutrition_title">అంచనా వేసిన పోషకాహారం</string>
+    <string name="analytics_energy">శక్తి</string>
+    <string name="analytics_protein">ప్రొటీన్</string>
+    <string name="analytics_carbohydrate">పిండి పదార్థాలు</string>
+    <string name="analytics_fat">కొవ్వు</string>
+    <string name="analytics_energy_value">%1$s kcal</string>
+    <string name="analytics_grams_value">%1$s g</string>
+    <string name="analytics_estimate_notice">ఈ మొత్తాలు అంచనాలను కలిపి లెక్కించినవి, కాబట్టి వాటి అనిశ్చితి కూడా వీటిలో ఉంటుంది. ఇది ఆహార మదింపు కాదు.</string>
+    <string name="analytics_empty">మీ అలవాట్లను చూడటానికి కొన్ని భోజనాలను నమోదు చేయండి.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">ప్రొఫైల్</string>
+    <string name="settings_language">భాష</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_telugu">తెలుగు</string>
+    <string name="settings_privacy">గోప్యత</string>
+    <string name="settings_store_images">భోజనం ఫోటోలను సర్వర్‌లో ఉంచండి</string>
+    <string name="settings_store_images_explainer">ఇది డిఫాల్ట్‌గా ఆఫ్‌లో ఉంటుంది. విశ్లేషణ కోసం మీ ఫోటో ఎప్పుడూ పంపబడుతుంది; ఆ తర్వాత దాన్ని ఉంచాలా వద్దా అనేది ఇది నిర్ణయిస్తుంది.</string>
+    <string name="settings_data">మీ డేటా</string>
+    <string name="settings_export">నా డేటాను ఎగుమతి చేయండి</string>
+    <string name="settings_export_explainer">ఈ ఖాతాలోని అన్ని భోజన వివరాలను ఒక ఫైల్‌గా దిగుమతి చేస్తుంది.</string>
+    <string name="settings_sign_out">సైన్ అవుట్</string>
+    <string name="settings_delete_account">నా ఖాతాను తొలగించండి</string>
+    <string name="settings_delete_account_confirm_title">ఈ ఖాతాను తొలగించాలా?</string>
+    <string name="settings_delete_account_confirm_body">మీ భోజనాలు, ఫోటోలు ఈ ఫోన్ నుండి తొలగించబడతాయి మరియు సర్వర్‌లో తొలగింపు కోసం గుర్తించబడతాయి. దీన్ని తిరిగి పొందలేరు.</string>
+    <string name="settings_delete_account_confirm">తొలగించండి</string>
+    <string name="settings_about">గురించి</string>
+    <string name="settings_version">వెర్షన్ %1$s</string>
+    <string name="settings_not_medical_advice">NutriLens ఒక నమోదు మరియు అంచనా సాధనం మాత్రమే. ఇది వైద్య సలహా, రోగ నిర్ధారణ లేదా చికిత్సను అందించదు.</string>
+
+    <!-- Sync -->
+    <string name="sync_all_synced">అన్ని భోజనాలు సేవ్ అయ్యాయి</string>
+    <string name="sync_pending">%1$d భోజనం అప్‌లోడ్ కోసం వేచి ఉంది</string>
+    <string name="sync_pending_plural">%1$d భోజనాలు అప్‌లోడ్ కోసం వేచి ఉన్నాయి</string>
+    <string name="sync_offline">ఇంటర్నెట్ లేదు. మీ భోజనాలు ఈ ఫోన్‌లో సేవ్ అయ్యాయి, తర్వాత వాటంతట అవే అప్‌లోడ్ అవుతాయి.</string>
+    <string name="sync_last_synced">చివరిగా %1$s కు సమకాలీకరించబడింది</string>
+    <string name="sync_retry_now">ఇప్పుడే సమకాలీకరించండి</string>
+    <string name="sync_failed">కొన్ని భోజనాలు ఇంకా అప్‌లోడ్ కాలేదు. అవి ఈ ఫోన్‌లో సురక్షితంగా ఉన్నాయి.</string>
+
+    <!-- Errors -->
+    <string name="error_offline">మీరు ఆఫ్‌లైన్‌లో ఉన్నారు.</string>
+    <string name="error_timeout">సర్వర్ స్పందించడానికి చాలా సమయం పట్టింది.</string>
+    <string name="error_session_expired">మీ సెషన్ ముగిసింది. దయచేసి మళ్ళీ సైన్ ఇన్ చేయండి.</string>
+    <string name="error_not_found">ఆ వివరం కనిపించలేదు.</string>
+    <string name="error_rate_limited">చాలా ఎక్కువ అభ్యర్థనలు. కాసేపటి తర్వాత ప్రయత్నించండి.</string>
+    <string name="error_server">మా వైపు ఏదో తప్పు జరిగింది.</string>
+    <string name="error_device">ఈ ఫోన్‌లో ఏదో తప్పు జరిగింది.</string>
+    <string name="error_image_too_large">ఆ ఫోటో చాలా పెద్దది.</string>
+    <string name="error_invalid_image">ఆ ఫోటోను చదవడం సాధ్యం కాలేదు.</string>
+    <string name="error_generic_retry">మళ్ళీ ప్రయత్నించండి</string>
+
+    <!-- Meal types -->
+    <string name="meal_type_breakfast">అల్పాహారం</string>
+    <string name="meal_type_lunch">మధ్యాహ్న భోజనం</string>
+    <string name="meal_type_dinner">రాత్రి భోజనం</string>
+    <string name="meal_type_snack">చిరుతిండి</string>
+    <string name="meal_type_beverage">పానీయం</string>
+    <string name="meal_type_other">భోజనం</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">హోమ్</string>
+    <string name="nav_timeline">కాలరేఖ</string>
+    <string name="nav_capture">ఫోటో</string>
+    <string name="nav_analytics">అలవాట్లు</string>
+    <string name="nav_profile">ప్రొఫైల్</string>
+    <string name="nav_back">వెనుకకు</string>
+
+    <!-- Confirmations -->
+    <string name="meal_saved">భోజనం నమోదు చేయబడింది</string>
+    <string name="meal_deleted">భోజనం తొలగించబడింది</string>
+    <string name="action_delete">తొలగించండి</string>
+    <string name="action_cancel">రద్దు చేయండి</string>
+    <string name="action_save">సేవ్ చేయండి</string>
+    <string name="action_undo">రద్దు చేయండి</string>
+</resources>

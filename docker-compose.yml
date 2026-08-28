@@ -1,0 +1,67 @@
+# Local development stack: API, PostgreSQL and Redis.
+#
+# Values here are development defaults and are safe to read: the compose file
+# is committed, so it must never contain a real credential. Everything the API
+# needs comes from the environment, and .env is git-ignored.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nutrilens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nutrilens-local-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-nutrilens}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # The API waits for this rather than sleeping and hoping.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nutrilens} -d ${POSTGRES_DB:-nutrilens}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NUTRILENS_ENVIRONMENT: development
+      NUTRILENS_DATABASE_URL: >-
+        postgresql+psycopg://${POSTGRES_USER:-nutrilens}:${POSTGRES_PASSWORD:-nutrilens-local-dev}@postgres:5432/${POSTGRES_DB:-nutrilens}
+      NUTRILENS_REDIS_URL: redis://redis:6379/0
+      NUTRILENS_JWT_SECRET: ${NUTRILENS_JWT_SECRET:?set NUTRILENS_JWT_SECRET in .env}
+      NUTRILENS_STORAGE_LOCAL_PATH: /var/lib/nutrilens/meal-images
+      NUTRILENS_LOG_JSON: "false"
+      NUTRILENS_CORS_ALLOW_ORIGINS: ${NUTRILENS_CORS_ALLOW_ORIGINS:-}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - meal-images:/var/lib/nutrilens/meal-images
+    # Migrations run before the server starts, so a fresh volume comes up with
+    # the current schema instead of failing on the first query.
+    command: >-
+      sh -c "alembic upgrade head &&
+             python -m app.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+
+volumes:
+  postgres-data:
+  meal-images:

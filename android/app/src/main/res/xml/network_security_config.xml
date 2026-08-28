@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Transport security.
+
+  Cleartext is refused everywhere by default, so a misconfigured base URL fails
+  loudly rather than sending bearer tokens and meal photographs in the clear.
+
+  The loopback exception exists only so a developer can point a debug build at
+  a backend running on their own machine through `adb reverse`. It applies to
+  localhost only and is scoped to the debug manifest overlay in practice; it
+  grants nothing to any remote host.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

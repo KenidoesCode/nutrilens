@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      A minimal platform theme. The interface is Compose, so this exists only
+      to give the window a correct background before the first frame and avoid
+      a flash of the wrong colour on launch.
+    -->
+    <style name="Theme.NutriLens" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/window_background</item>
+        <item name="android:navigationBarColor">@color/window_background</item>
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

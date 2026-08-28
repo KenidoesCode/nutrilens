@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  English strings: the whole app's user-facing copy, in one catalogue.
+
+  It lives in core:designsystem because every feature module already depends on
+  it, and a single catalogue is what keeps shared copy (errors, actions, units)
+  from being duplicated and drifting across seven feature modules.
+
+  Every user-facing string in the app lives in a resource file; nothing is
+  hardcoded in Kotlin. The Telugu translation in values-te/ carries the same
+  keys, so a missing translation is a visible gap rather than a crash.
+
+  Anything describing an estimate says so explicitly. That wording is a product
+  requirement, not a stylistic choice: the app must never let a person mistake
+  a geometric estimate for a measurement.
+-->
+<resources>
+    <string name="app_name">NutriLens</string>
+    <string name="app_tagline">Snap your meal. Understand your meal.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">NutriLens</string>
+    <string name="onboarding_subtitle">Understand your meals.\nUnderstand your eating patterns.</string>
+    <string name="onboarding_body">Photograph a meal and NutriLens estimates what is on the plate and how much of it there is. Every figure is an estimate you can correct.</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_sign_in">I already have an account</string>
+
+    <!-- Authentication -->
+    <string name="auth_sign_in_title">Sign in</string>
+    <string name="auth_sign_up_title">Create your account</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_display_name">Name (optional)</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_sign_up">Create account</string>
+    <string name="auth_switch_to_sign_up">Need an account? Create one</string>
+    <string name="auth_switch_to_sign_in">Already registered? Sign in</string>
+    <string name="auth_error_email_required">Enter your email address.</string>
+    <string name="auth_error_email_invalid">That does not look like an email address.</string>
+    <string name="auth_error_password_required">Enter your password.</string>
+    <string name="auth_error_password_too_short">Use at least %1$d characters.</string>
+    <string name="auth_error_invalid_credentials">Incorrect email or password.</string>
+    <string name="auth_error_email_taken">An account with that email already exists.</string>
+    <string name="auth_error_weak_password">Choose a stronger password.</string>
+
+    <!-- Home -->
+    <string name="home_title">Today</string>
+    <string name="home_greeting">Hello, %1$s</string>
+    <string name="home_greeting_anonymous">Hello</string>
+    <string name="home_capture_meal">Capture a meal</string>
+    <string name="home_no_meals_title">No meals yet today</string>
+    <string name="home_no_meals_body">Photograph your next meal and NutriLens will estimate what is on the plate.</string>
+    <string name="home_meals_today">Meals today</string>
+    <string name="home_recent_meals">Recent meals</string>
+    <string name="home_view_all">View all</string>
+
+    <!-- Eating window -->
+    <string name="window_title">Today\'s eating window</string>
+    <string name="window_first_meal">First meal</string>
+    <string name="window_last_meal">Last meal</string>
+    <string name="window_eating_window">Eating window</string>
+    <string name="window_fasting_period">Fasting period</string>
+    <string name="window_meals">Meals</string>
+    <string name="window_not_enough_data">Log a second meal to see today\'s eating window.</string>
+    <string name="window_no_meals">No meals logged today.</string>
+    <string name="window_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="window_content_description">Eating window from %1$s to %2$s, %3$s. Fasting %4$s.</string>
+    <string name="window_empty_content_description">No meals logged on %1$s.</string>
+
+    <!-- Capture -->
+    <string name="capture_title">Capture meal</string>
+    <string name="capture_instruction">Place the whole meal inside the frame.</string>
+    <string name="capture_hint_reference">Including a plate or a familiar object in frame improves the portion estimate.</string>
+    <string name="capture_shutter">Capture</string>
+    <string name="capture_shutter_content_description">Take a photograph of your meal</string>
+    <string name="capture_permission_title">Camera access needed</string>
+    <string name="capture_permission_body">NutriLens needs the camera to photograph your meals. Photographs stay on your device unless you turn on remote storage in Settings.</string>
+    <string name="capture_permission_grant">Allow camera access</string>
+    <string name="capture_permission_denied">Camera access was declined. You can still log meals manually.</string>
+    <string name="capture_log_manually">Log a meal manually</string>
+    <string name="capture_error">The photograph could not be captured. Please try again.</string>
+
+    <!-- Analysis -->
+    <string name="analysis_title">Analysing meal</string>
+    <string name="analysis_step_detecting">Detecting foods</string>
+    <string name="analysis_step_portions">Estimating portions</string>
+    <string name="analysis_step_nutrition">Calculating nutrition</string>
+    <string name="analysis_in_progress_content_description">Analysing your meal photograph</string>
+    <string name="analysis_results_title">What we found</string>
+    <string name="analysis_estimate_notice">All quantities are estimates from a single photograph, not measurements. Adjust anything that looks wrong.</string>
+    <string name="analysis_no_food_title">No food detected</string>
+    <string name="analysis_no_food_body">We could not identify any food in that photograph. Try again with better lighting, or add the foods yourself.</string>
+    <string name="analysis_offline_title">Analysis needs a connection</string>
+    <string name="analysis_offline_body">Food recognition runs on our servers. You can log this meal manually now and it will sync later.</string>
+    <string name="analysis_failed">The photograph could not be analysed.</string>
+    <string name="analysis_retry">Try again</string>
+    <string name="analysis_save_meal">Save meal</string>
+    <string name="analysis_add_food">Add food</string>
+
+    <!-- Meal items -->
+    <string name="item_mass_grams">%1$s g</string>
+    <string name="item_volume_millilitres">%1$s ml</string>
+    <string name="item_estimated_mass">Estimated %1$s g</string>
+    <string name="item_confidence_percent">%1$d%% confidence</string>
+    <string name="item_confidence_high">High confidence</string>
+    <string name="item_confidence_medium">Medium confidence</string>
+    <string name="item_confidence_low">Low confidence</string>
+    <string name="item_confidence_content_description">%1$s, %2$d percent</string>
+    <string name="item_fallback_density_notice">Estimated with a general density for this kind of food.</string>
+    <string name="item_edit">Edit</string>
+    <string name="item_remove">Remove</string>
+    <string name="item_adjust_portion">Adjust portion</string>
+    <string name="item_rename">Change food</string>
+    <string name="item_corrected_by_you">Adjusted by you</string>
+    <string name="item_category_solid">Solid</string>
+    <string name="item_category_semisolid">Semi-solid</string>
+    <string name="item_category_liquid">Liquid</string>
+
+    <!-- Portion adjustment -->
+    <string name="portion_title">Adjust portion</string>
+    <string name="portion_estimated_volume">Estimated volume</string>
+    <string name="portion_your_volume">Your estimate</string>
+    <string name="portion_resulting_mass">That is about %1$s g</string>
+    <string name="portion_save">Save</string>
+    <string name="portion_cancel">Cancel</string>
+    <string name="portion_invalid">Enter a volume between 1 and 3000 ml.</string>
+
+    <!-- Food picker -->
+    <string name="food_picker_title">Change food</string>
+    <string name="food_picker_search">Search foods</string>
+    <string name="food_picker_no_results">No foods match that search.</string>
+    <string name="food_picker_custom">Use \"%1$s\" anyway</string>
+
+    <!-- Timeline -->
+    <string name="timeline_title">Timeline</string>
+    <string name="timeline_empty_title">No meals recorded</string>
+    <string name="timeline_empty_body">Meals you log will appear here in the order you ate them.</string>
+    <string name="timeline_today">Today</string>
+    <string name="timeline_yesterday">Yesterday</string>
+
+    <!-- Analytics -->
+    <string name="analytics_title">Patterns</string>
+    <string name="analytics_range_week">7 days</string>
+    <string name="analytics_range_fortnight">14 days</string>
+    <string name="analytics_range_month">30 days</string>
+    <string name="analytics_mean_window">Average eating window</string>
+    <string name="analytics_mean_meals">Average meals per day</string>
+    <string name="analytics_consistency">Eating window consistency</string>
+    <string name="analytics_consistency_explainer">How similar your eating window is from day to day. Needs at least two days with more than one meal.</string>
+    <string name="analytics_consistency_unavailable">Not enough days yet</string>
+    <string name="analytics_nutrition_title">Estimated intake</string>
+    <string name="analytics_energy">Energy</string>
+    <string name="analytics_protein">Protein</string>
+    <string name="analytics_carbohydrate">Carbohydrate</string>
+    <string name="analytics_fat">Fat</string>
+    <string name="analytics_energy_value">%1$s kcal</string>
+    <string name="analytics_grams_value">%1$s g</string>
+    <string name="analytics_estimate_notice">These totals add up estimates and inherit their uncertainty. They are not a dietary assessment.</string>
+    <string name="analytics_empty">Log a few meals to see your patterns.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Profile</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_telugu">తెలుగు</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_store_images">Keep meal photographs on the server</string>
+    <string name="settings_store_images_explainer">Off by default. Your photograph is always sent for analysis; this controls whether we keep it afterwards.</string>
+    <string name="settings_data">Your data</string>
+    <string name="settings_export">Export my data</string>
+    <string name="settings_export_explainer">Downloads every meal record on this account as a file.</string>
+    <string name="settings_sign_out">Sign out</string>
+    <string name="settings_delete_account">Delete my account</string>
+    <string name="settings_delete_account_confirm_title">Delete this account?</string>
+    <string name="settings_delete_account_confirm_body">Your meals and photographs will be removed from this device and marked for deletion on the server. This cannot be undone.</string>
+    <string name="settings_delete_account_confirm">Delete</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_not_medical_advice">NutriLens is a tracking and estimation tool. It does not provide medical advice, diagnosis or treatment.</string>
+
+    <!-- Sync -->
+    <string name="sync_all_synced">All meals saved</string>
+    <string name="sync_pending">%1$d meal waiting to upload</string>
+    <string name="sync_pending_plural">%1$d meals waiting to upload</string>
+    <string name="sync_offline">Offline. Your meals are saved on this device and will upload automatically.</string>
+    <string name="sync_last_synced">Last synced %1$s</string>
+    <string name="sync_retry_now">Sync now</string>
+    <string name="sync_failed">Some meals could not upload yet. They are safe on this device.</string>
+
+    <!-- Errors -->
+    <string name="error_offline">You are offline.</string>
+    <string name="error_timeout">The server took too long to respond.</string>
+    <string name="error_session_expired">Your session expired. Please sign in again.</string>
+    <string name="error_not_found">That record could not be found.</string>
+    <string name="error_rate_limited">Too many requests. Try again in a moment.</string>
+    <string name="error_server">Something went wrong on our side.</string>
+    <string name="error_device">Something went wrong on this device.</string>
+    <string name="error_image_too_large">That photograph is too large.</string>
+    <string name="error_invalid_image">That photograph could not be read.</string>
+    <string name="error_generic_retry">Try again</string>
+
+    <!-- Meal types -->
+    <string name="meal_type_breakfast">Breakfast</string>
+    <string name="meal_type_lunch">Lunch</string>
+    <string name="meal_type_dinner">Dinner</string>
+    <string name="meal_type_snack">Snack</string>
+    <string name="meal_type_beverage">Drink</string>
+    <string name="meal_type_other">Meal</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_timeline">Timeline</string>
+    <string name="nav_capture">Capture</string>
+    <string name="nav_analytics">Patterns</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_back">Back</string>
+
+    <!-- Confirmations -->
+    <string name="meal_saved">Meal logged</string>
+    <string name="meal_deleted">Meal deleted</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_undo">Undo</string>
+</resources>

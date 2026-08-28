@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing is backed up.
+
+  The database holds a person's dietary history and the encrypted preferences
+  hold their session. Neither belongs in a cloud backup the user did not
+  explicitly ask for, and the Keystore-wrapped session key would not survive a
+  restore to a different device anyway.
+-->
+<full-backup-content>
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="." />
+</full-backup-content>

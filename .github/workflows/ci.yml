@@ -1,0 +1,213 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# A new push supersedes an in-flight run on the same ref; there is no value in
+# finishing a build for a commit that is already replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  JAVA_VERSION: "17"
+
+jobs:
+  python-lint:
+    name: Python lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install tooling
+        run: pip install "ruff>=0.5"
+
+      - name: Ruff
+        run: ruff check ml backend
+
+  ml-tests:
+    name: ML tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./ml[dev]"
+
+      - name: Test
+        run: pytest ml/tests -q
+
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    # The suite runs against SQLite for speed; PostgreSQL is here so the
+    # migrations are verified against the engine production actually uses.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nutrilens
+          POSTGRES_PASSWORD: nutrilens-ci
+          POSTGRES_DB: nutrilens_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U nutrilens"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ./ml
+          pip install -r backend/requirements-dev.txt
+
+      - name: Test
+        env:
+          NUTRILENS_ENVIRONMENT: test
+          NUTRILENS_JWT_SECRET: ci-secret-key-that-is-long-enough-32-chars
+        run: pytest backend/tests -q
+
+      - name: Apply migrations against PostgreSQL
+        working-directory: backend
+        env:
+          NUTRILENS_ENVIRONMENT: test
+          NUTRILENS_JWT_SECRET: ci-secret-key-that-is-long-enough-32-chars
+          NUTRILENS_DATABASE_URL: postgresql+psycopg://nutrilens:nutrilens-ci@localhost:5432/nutrilens_ci
+          PYTHONPATH: .
+        run: |
+          python -m alembic upgrade head
+          python -m app.seed
+
+      - name: Verify the migration reverses cleanly
+        working-directory: backend
+        env:
+          NUTRILENS_ENVIRONMENT: test
+          NUTRILENS_JWT_SECRET: ci-secret-key-that-is-long-enough-32-chars
+          NUTRILENS_DATABASE_URL: postgresql+psycopg://nutrilens:nutrilens-ci@localhost:5432/nutrilens_ci
+          PYTHONPATH: .
+        # A migration that cannot be rolled back is a migration that cannot be
+        # safely deployed.
+        run: python -m alembic downgrade base
+
+  domain-module:
+    name: Android domain module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The domain module is plain JVM Kotlin, so its chrononutrition rules and
+      # retry policy are compiled and tested without the Android SDK.
+      - name: Compile and test the domain module
+        run: bash scripts/verify-domain-module.sh
+
+  android:
+    name: Android build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android
+
+      - name: Unit tests
+        working-directory: android
+        run: ./gradlew test --stacktrace
+
+      - name: Lint
+        working-directory: android
+        run: ./gradlew lint --stacktrace
+
+      - name: Assemble the debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nutrilens-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lint-reports
+          path: android/**/build/reports/lint-results-*.html
+          if-no-files-found: ignore
+
+  docker:
+    name: Backend image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built, not pushed: CI proves the image assembles, and publishing is a
+      # release decision rather than a per-commit one.
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          load: true
+          tags: nutrilens-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test the image
+        run: |
+          docker run --rm -d --name nutrilens-ci \
+            -e NUTRILENS_ENVIRONMENT=development \
+            -e NUTRILENS_JWT_SECRET=ci-secret-key-that-is-long-enough-32-chars \
+            -e NUTRILENS_DATABASE_URL=sqlite+pysqlite:////tmp/ci.db \
+            -p 8000:8000 nutrilens-backend:ci
+          for _ in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then break; fi
+            sleep 2
+          done
+          curl -sf http://localhost:8000/health
+          docker rm -f nutrilens-ci

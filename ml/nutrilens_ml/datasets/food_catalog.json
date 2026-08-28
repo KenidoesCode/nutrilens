@@ -1,0 +1,156 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_version": "2024.1",
+  "notice": "Approximate reference values compiled for estimation. These are NOT laboratory measurements and NOT clinically validated. Density values are typical prepared-food bulk densities; nutrition values are per 100 g of the prepared food. Replace this table with an institution-approved food composition database before any study use.",
+  "default_density": {
+    "solid": 0.85,
+    "semisolid": 1.0,
+    "liquid": 1.0
+  },
+  "foods": [
+    {
+      "key": "rice",
+      "display_name": "Rice",
+      "category": "solid",
+      "density_g_per_ml": 0.85,
+      "density_confidence": 0.8,
+      "nutrition_per_100g": {"energy_kcal": 130, "protein_g": 2.7, "carbohydrate_g": 28.2, "fat_g": 0.3},
+      "aliases": ["steamed rice", "white rice", "boiled rice", "annam"],
+      "hue_range_deg": [30, 60],
+      "saturation_range": [0.0, 0.28],
+      "value_range": [0.72, 1.0]
+    },
+    {
+      "key": "dal",
+      "display_name": "Dal",
+      "category": "semisolid",
+      "density_g_per_ml": 1.02,
+      "density_confidence": 0.7,
+      "nutrition_per_100g": {"energy_kcal": 116, "protein_g": 7.0, "carbohydrate_g": 16.0, "fat_g": 2.5},
+      "aliases": ["lentil curry", "pappu", "sambar"],
+      "hue_range_deg": [38, 58],
+      "saturation_range": [0.35, 0.85],
+      "value_range": [0.55, 0.95]
+    },
+    {
+      "key": "vegetable_curry",
+      "display_name": "Vegetable curry",
+      "category": "semisolid",
+      "density_g_per_ml": 0.98,
+      "density_confidence": 0.6,
+      "nutrition_per_100g": {"energy_kcal": 92, "protein_g": 2.4, "carbohydrate_g": 9.5, "fat_g": 4.8},
+      "aliases": ["curry", "kura", "sabzi", "mixed vegetables"],
+      "hue_range_deg": [12, 36],
+      "saturation_range": [0.45, 1.0],
+      "value_range": [0.35, 0.85]
+    },
+    {
+      "key": "leafy_greens",
+      "display_name": "Leafy greens",
+      "category": "solid",
+      "density_g_per_ml": 0.35,
+      "density_confidence": 0.55,
+      "nutrition_per_100g": {"energy_kcal": 28, "protein_g": 2.7, "carbohydrate_g": 3.6, "fat_g": 0.5},
+      "aliases": ["spinach", "salad", "greens", "aaku kura"],
+      "hue_range_deg": [70, 165],
+      "saturation_range": [0.25, 1.0],
+      "value_range": [0.2, 0.9]
+    },
+    {
+      "key": "chapati",
+      "display_name": "Chapati",
+      "category": "solid",
+      "density_g_per_ml": 0.55,
+      "density_confidence": 0.6,
+      "nutrition_per_100g": {"energy_kcal": 297, "protein_g": 9.0, "carbohydrate_g": 46.0, "fat_g": 8.0},
+      "aliases": ["roti", "flatbread", "phulka"],
+      "hue_range_deg": [25, 45],
+      "saturation_range": [0.15, 0.45],
+      "value_range": [0.6, 0.95]
+    },
+    {
+      "key": "yogurt",
+      "display_name": "Yogurt",
+      "category": "semisolid",
+      "density_g_per_ml": 1.04,
+      "density_confidence": 0.85,
+      "nutrition_per_100g": {"energy_kcal": 61, "protein_g": 3.5, "carbohydrate_g": 4.7, "fat_g": 3.3},
+      "aliases": ["curd", "perugu", "dahi"],
+      "hue_range_deg": [0, 60],
+      "saturation_range": [0.0, 0.12],
+      "value_range": [0.85, 1.0]
+    },
+    {
+      "key": "water",
+      "display_name": "Water",
+      "category": "liquid",
+      "density_g_per_ml": 1.0,
+      "density_confidence": 0.98,
+      "nutrition_per_100g": {"energy_kcal": 0, "protein_g": 0.0, "carbohydrate_g": 0.0, "fat_g": 0.0},
+      "aliases": ["drinking water", "neeru"],
+      "hue_range_deg": [180, 220],
+      "saturation_range": [0.0, 0.2],
+      "value_range": [0.6, 1.0]
+    },
+    {
+      "key": "tea",
+      "display_name": "Tea",
+      "category": "liquid",
+      "density_g_per_ml": 1.0,
+      "density_confidence": 0.8,
+      "nutrition_per_100g": {"energy_kcal": 37, "protein_g": 1.2, "carbohydrate_g": 5.5, "fat_g": 1.2},
+      "aliases": ["chai", "milk tea", "coffee"],
+      "hue_range_deg": [20, 38],
+      "saturation_range": [0.2, 0.6],
+      "value_range": [0.45, 0.8]
+    },
+    {
+      "key": "tomato_dish",
+      "display_name": "Tomato-based dish",
+      "category": "semisolid",
+      "density_g_per_ml": 1.03,
+      "density_confidence": 0.55,
+      "nutrition_per_100g": {"energy_kcal": 74, "protein_g": 1.9, "carbohydrate_g": 8.0, "fat_g": 4.0},
+      "aliases": ["tomato curry", "rasam", "chutney"],
+      "hue_range_deg": [348, 12],
+      "saturation_range": [0.4, 1.0],
+      "value_range": [0.3, 0.9]
+    },
+    {
+      "key": "egg",
+      "display_name": "Egg",
+      "category": "solid",
+      "density_g_per_ml": 1.03,
+      "density_confidence": 0.7,
+      "nutrition_per_100g": {"energy_kcal": 155, "protein_g": 12.6, "carbohydrate_g": 1.1, "fat_g": 10.6},
+      "aliases": ["boiled egg", "omelette", "kodi guddu"],
+      "hue_range_deg": [45, 62],
+      "saturation_range": [0.3, 0.75],
+      "value_range": [0.8, 1.0]
+    },
+    {
+      "key": "chicken",
+      "display_name": "Chicken",
+      "category": "solid",
+      "density_g_per_ml": 1.05,
+      "density_confidence": 0.65,
+      "nutrition_per_100g": {"energy_kcal": 165, "protein_g": 31.0, "carbohydrate_g": 0.0, "fat_g": 3.6},
+      "aliases": ["chicken curry", "grilled chicken", "kodi"],
+      "hue_range_deg": [14, 30],
+      "saturation_range": [0.3, 0.7],
+      "value_range": [0.35, 0.7]
+    },
+    {
+      "key": "fruit",
+      "display_name": "Fruit",
+      "category": "solid",
+      "density_g_per_ml": 0.65,
+      "density_confidence": 0.5,
+      "nutrition_per_100g": {"energy_kcal": 60, "protein_g": 0.8, "carbohydrate_g": 15.0, "fat_g": 0.2},
+      "aliases": ["banana", "apple", "mango", "pandu"],
+      "hue_range_deg": [40, 70],
+      "saturation_range": [0.5, 1.0],
+      "value_range": [0.6, 1.0]
+    }
+  ]
+}
