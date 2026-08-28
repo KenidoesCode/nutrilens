@@ -5,11 +5,11 @@
 | Suite | Count | Runs in CI | Needs the Android SDK |
 |---|---|---|---|
 | `ml/tests` | 149 | yes | no |
-| `backend/tests` | 177 | yes | no |
-| `android/core/model` | 53 | yes | **no** |
+| `backend/tests` | 181 | yes | no |
+| `android/core/model` | 67 | yes | **no** |
 | `android/**` unit tests | -- | yes | yes |
 
-326 Python tests and 53 JVM tests run on any machine with Python and a JDK. The
+330 Python tests and 67 JVM tests run on any machine with Python and a JDK. The
 remaining Android unit tests need the SDK and run in the `android` CI job.
 
 ```bash
@@ -114,6 +114,10 @@ Each of these was a real defect found by a failing test, not a hypothetical:
 | `get_settings_dependency` ignored the app's own settings | `test_login_attempts_are_throttled` |
 | An 11-digit numeric password was accepted | `test_rejects_weak_passwords` |
 | One malformed meal rejected an entire sync batch | `test_one_bad_operation_does_not_lose_the_others` |
+| **Every edit to a synced meal was silently discarded** — the replayed idempotency key made the server return the meal unchanged, and both sides reported success | `TestEditsAfterSync` |
+| The food catalog cache was never populated, so every food correction fell back to a generic density | dependency audit |
+| The profile never loaded on app restart, so a signed-in user saw a blank name | dependency audit |
+| Account deletion never reached the server | API-usage audit |
 
 ## Not tested
 
@@ -127,3 +131,7 @@ Stated plainly:
 - **Load and soak.** No performance baseline exists.
 - **Multi-device concurrent sync.** Single-client conflict handling is tested;
   two devices editing the same meal simultaneously is not.
+- **The Android sync engine end to end.** Its rules are unit-tested with fakes,
+  and the server side of the corrected edit flow is covered by
+  `TestEditsAfterSync`, but the two halves have not been exercised together
+  against a running backend.

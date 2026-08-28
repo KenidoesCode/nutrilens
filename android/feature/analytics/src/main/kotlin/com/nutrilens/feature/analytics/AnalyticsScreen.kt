@@ -29,8 +29,10 @@ import com.nutrilens.core.designsystem.component.NutriLensCard
 import com.nutrilens.core.designsystem.component.SectionHeader
 import com.nutrilens.core.designsystem.theme.Dimens
 import com.nutrilens.core.designsystem.theme.NutriLensTheme
+import com.nutrilens.core.designsystem.format.asHoursAndMinutes
+import com.nutrilens.core.designsystem.format.asWholeGrams
 import com.nutrilens.core.model.EatingWindow
-import java.time.Duration
+import com.nutrilens.core.model.NutritionTotals
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -106,7 +108,7 @@ fun AnalyticsScreen(
             NutriLensCard {
                 MetricRow(
                     label = stringResource(UiR.string.analytics_mean_window),
-                    value = summary.meanEatingWindow?.formatted() ?: PLACEHOLDER,
+                    value = summary.meanEatingWindow?.asHoursAndMinutes() ?: PLACEHOLDER,
                 )
                 MetricRow(
                     label = stringResource(UiR.string.analytics_mean_meals),
@@ -130,6 +132,10 @@ fun AnalyticsScreen(
             }
         }
 
+        item {
+            NutritionCard(totals = uiState.nutrition)
+        }
+
         item { SectionHeader(title = stringResource(UiR.string.timeline_title)) }
 
         items(items = summary.days, key = { it.day.toString() }) { day ->
@@ -140,6 +146,61 @@ fun AnalyticsScreen(
             EstimateDisclaimer(text = stringResource(UiR.string.analytics_estimate_notice))
         }
         item { Column(modifier = Modifier.padding(bottom = Dimens.spaceExtraLarge * 2)) {} }
+    }
+}
+
+/**
+ * Estimated intake over the range.
+ *
+ * When some foods have no nutrition data, the card says so rather than letting
+ * the macro totals quietly disagree with the mass total. A reader comparing the
+ * two would otherwise conclude one of them is wrong.
+ */
+@Composable
+private fun NutritionCard(totals: NutritionTotals) {
+    NutriLensCard {
+        Text(
+            text = stringResource(UiR.string.analytics_nutrition_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+
+        MetricRow(
+            label = stringResource(UiR.string.analytics_energy),
+            value = stringResource(
+                UiR.string.analytics_energy_value,
+                totals.energyKcal.asWholeGrams(),
+            ),
+        )
+        MetricRow(
+            label = stringResource(UiR.string.analytics_protein),
+            value = stringResource(
+                UiR.string.analytics_grams_value,
+                totals.proteinGrams.asWholeGrams(),
+            ),
+        )
+        MetricRow(
+            label = stringResource(UiR.string.analytics_carbohydrate),
+            value = stringResource(
+                UiR.string.analytics_grams_value,
+                totals.carbohydrateGrams.asWholeGrams(),
+            ),
+        )
+        MetricRow(
+            label = stringResource(UiR.string.analytics_fat),
+            value = stringResource(
+                UiR.string.analytics_grams_value,
+                totals.fatGrams.asWholeGrams(),
+            ),
+        )
+
+        if (totals.isIncomplete) {
+            Text(
+                text = stringResource(UiR.string.item_fallback_density_notice),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.padding(top = Dimens.spaceExtraSmall),
+            )
+        }
     }
 }
 
@@ -198,8 +259,8 @@ private fun DayRow(day: EatingWindow) {
                     UiR.string.window_content_description,
                     first.format(timeFormatter),
                     last.format(timeFormatter),
-                    day.eatingWindow.formatted(),
-                    day.fastingPeriod?.formatted().orEmpty(),
+                    day.eatingWindow.asHoursAndMinutes(),
+                    day.fastingPeriod?.asHoursAndMinutes().orEmpty(),
                 ),
                 modifier = Modifier.padding(top = Dimens.spaceSmall),
             )
@@ -234,13 +295,6 @@ private val dateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
 private fun LocalTime.fractionOfDay(): Float = (hour * 60 + minute) / (24f * 60f)
-
-@Composable
-private fun Duration.formatted(): String = stringResource(
-    UiR.string.window_duration_hours_minutes,
-    toHours().toInt(),
-    (toMinutes() % 60).toInt(),
-)
 
 private fun AnalyticsRange.labelRes(): Int = when (this) {
     AnalyticsRange.WEEK -> UiR.string.analytics_range_week

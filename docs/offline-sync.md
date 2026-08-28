@@ -76,6 +76,48 @@ A subtlety the test suite pins down: the lookup includes soft-deleted rows.
 Replaying an original create must not resurrect a meal the user has since
 deleted.
 
+## Why edits do not go through the same path
+
+Idempotency has a consequence that is easy to miss and was a real bug here
+before a test caught it.
+
+Re-uploading an **edited** meal under its original key is, by definition, a
+replay. The server recognises the key, returns the stored meal unchanged, and
+the client marks the row synced. The edit is silently discarded, and neither
+side reports a problem:
+
+```
+client: 180 ml -> user corrects to 100 ml -> re-upload (same key)
+server: "I have seen this key" -> returns the 153 g meal
+client: "accepted" -> marks SYNCED
+result: the server still holds 153 g. Nothing failed. The correction is gone.
+```
+
+So edits take a different route. Creations go through `/sync/push`; **edits go
+through the item endpoints**, addressed by the server's own item ids:
+
+| Change | How it reaches the server |
+|---|---|
+| new meal | `POST /sync/push`, `create_meal` |
+| meal deleted | `POST /sync/push`, `delete_meal` |
+| portion corrected | `PATCH /meals/items/{id}/portion` |
+| food corrected | `PATCH /meals/items/{id}/name` |
+| item removed | `DELETE /meals/items/{id}` |
+
+Those endpoints need the **server's** item ids, which the client only has
+because a successful push returns the stored meal rather than just its id. On
+adopting it, the client keeps its own meal id and image path and takes
+everything else -- the server's item ids and its recomputed masses -- so the two
+copies cannot drift.
+
+Edits are queued durably in `sync_queue` with their own idempotency keys and
+their own backoff, so an edit made offline survives the app being killed. They
+are drained **before** creations and before the pull, so a pull cannot overwrite
+a correction with the pre-edit copy.
+
+Regression tests: `test_sync_api.py::TestEditsAfterSync`. One of them asserts
+the surprising replay behaviour directly, so nobody "fixes" it back.
+
 ## Retry policy
 
 Exponential backoff with **full jitter**:
@@ -108,6 +150,18 @@ budget would defeat the entire point of storing it locally first.
 There are two independent retry mechanisms, on purpose: per-record backoff
 inside the engine, and WorkManager's own backoff for the whole pass.
 
+## Batching
+
+Uploads go out as one request. The endpoint applies each operation
+independently and reports them individually, so a single malformed meal fails
+alone while the rest apply.
+
+Batching matters most in exactly the situation the feature exists for: a device
+that has been offline for a day reconnects with a dozen meals queued and makes
+one round trip instead of a dozen. A transport failure of the whole batch counts
+as *one* failed attempt against each row, so backoff applies to the outage
+rather than each meal separately burning its budget on it.
+
 ## Push before pull
 
 ```mermaid
@@ -121,18 +175,20 @@ sequenceDiagram
     E->>E: online?
     Note over E: offline -> stop immediately,<br/>nothing is marked failed
 
+    E->>R: queued item edits
+    E->>A: PATCH/DELETE /meals/items/{id}
+    Note over E,A: edits first, so a pull cannot<br/>overwrite a correction
+
     E->>R: rows due for upload
-    loop each row
-        E->>R: mark SYNCING
-        E->>A: POST /meals (idempotency key)
-        alt accepted
-            A-->>E: 201
-            E->>R: mark SYNCED
+    E->>R: mark them SYNCING
+    E->>A: POST /sync/push (one batch, keyed operations)
+    A-->>E: per-operation results, each with the stored meal
+    loop each result
+        alt applied or replayed
+            E->>R: adopt server ids + masses, mark SYNCED
         else transient
-            A-->>E: 5xx / timeout
             E->>R: RETRYING + next attempt time
         else permanent
-            A-->>E: 4xx
             E->>R: FAILED
         end
     end
@@ -220,3 +276,7 @@ badge is noise people learn to ignore.
 | backoff grows, caps and jitters | `RetryPolicyTest` (runs in CI) |
 | permanent errors are not retried | `OutcomeTest`, `SyncEngineTest` |
 | `SYNCING` is excluded from the queue | `SyncEngineTest` |
+| a push returns the server's item ids | `test_sync_api.py::TestPush` |
+| a replay still returns them | same |
+| re-uploading an edit changes nothing | `test_sync_api.py::TestEditsAfterSync` |
+| an item correction lands and keeps the original | same |

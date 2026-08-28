@@ -73,6 +73,31 @@ class TestPush:
         ).json()
         assert replay["replayed"] == 1
 
+    def test_a_create_returns_the_stored_meal(self, client, auth_headers, make_meal):
+        # The client needs the server's item ids: without them it cannot
+        # address an individual item to correct it later, and the correction
+        # would be lost on the next upload.
+        response = client.post(
+            "/api/v1/sync/push",
+            json={"operations": [push_op(make_meal, "op-meal-back")]},
+            headers=auth_headers,
+        ).json()
+
+        meal = response["results"][0]["meal"]
+        assert meal is not None
+        assert meal["items"][0]["id"]
+        assert meal["items"][0]["estimated_mass_g"] == 153.0
+
+    def test_a_replay_also_returns_the_meal(self, client, auth_headers, make_meal):
+        # A client whose response was lost must be able to recover the ids on
+        # the retry, or a lost response would permanently break its edits.
+        batch = {"operations": [push_op(make_meal, "op-replay-meal")]}
+        client.post("/api/v1/sync/push", json=batch, headers=auth_headers)
+        replay = client.post("/api/v1/sync/push", json=batch, headers=auth_headers).json()
+
+        assert replay["results"][0]["status"] == "replayed"
+        assert replay["results"][0]["meal"]["items"][0]["id"]
+
     def test_applies_a_delete(self, client, auth_headers, make_meal):
         meal_id = client.post("/api/v1/meals", json=make_meal(), headers=auth_headers).json()["id"]
         response = client.post(
@@ -114,6 +139,55 @@ class TestPush:
             ).status_code
             == 401
         )
+
+
+class TestEditsAfterSync:
+    """The path a correction actually takes once a meal is on the server.
+
+    Re-uploading an edited meal cannot work: the original idempotency key makes
+    it a replay and the server returns the meal unchanged. These tests pin down
+    the flow that does work, and the property that made the bug invisible.
+    """
+
+    def test_re_uploading_an_edited_meal_is_a_replay_and_changes_nothing(
+        self, client, auth_headers, make_meal
+    ):
+        # Documented here because it is surprising and it is why the client
+        # sends item operations rather than re-uploading the meal.
+        payload = make_meal(idempotency_key="edit-replay")
+        created = client.post("/api/v1/meals", json=payload, headers=auth_headers).json()
+        assert created["items"][0]["estimated_mass_g"] == 153.0
+
+        payload["items"][0]["estimated_volume_ml"] = 100.0
+        replay = client.post("/api/v1/meals", json=payload, headers=auth_headers)
+
+        assert replay.status_code == 200
+        assert replay.json()["items"][0]["estimated_mass_g"] == 153.0
+
+    def test_an_item_correction_lands_and_keeps_the_original(
+        self, client, auth_headers, make_meal
+    ):
+        push = client.post(
+            "/api/v1/sync/push",
+            json={"operations": [push_op(make_meal, "edit-flow-1")]},
+            headers=auth_headers,
+        ).json()["results"][0]
+
+        item_id = push["meal"]["items"][0]["id"]
+        client.patch(
+            f"/api/v1/meals/items/{item_id}/portion",
+            json={"corrected_volume_ml": 100.0},
+            headers=auth_headers,
+        )
+
+        stored = client.get(
+            f"/api/v1/meals/{push['entity_id']}", headers=auth_headers
+        ).json()["items"][0]
+
+        assert stored["estimated_mass_g"] == 85.0
+        # The model's original figure survives, so accuracy stays measurable.
+        assert stored["original_mass_g"] == 153.0
+        assert stored["was_user_corrected"] is True
 
 
 class TestPull:

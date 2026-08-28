@@ -3,16 +3,22 @@ package com.nutrilens.core.data.sync
 import com.nutrilens.core.common.network.ConnectivityObserver
 import com.nutrilens.core.common.time.TimeProvider
 import com.nutrilens.core.database.dao.MealDao
+import com.nutrilens.core.database.dao.SyncOperationDao
 import com.nutrilens.core.database.entity.MealEntity
 import com.nutrilens.core.database.entity.MealItemEntity
 import com.nutrilens.core.database.entity.MealWithItems
+import com.nutrilens.core.database.entity.SyncOperationEntity
+import com.nutrilens.core.model.FoodCatalogItem
+import com.nutrilens.core.model.Outcome
 import com.nutrilens.core.model.SyncState
+import com.nutrilens.core.model.repository.FoodCatalogRepository
 import com.nutrilens.core.model.sync.RetryPolicy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -111,11 +117,19 @@ class SyncEngineTest {
         api = throwingApi(),
         mealDao = dao,
         errorMapper = com.nutrilens.core.network.ApiErrorMapper(
-            kotlinx.serialization.json.Json { ignoreUnknownKeys = true },
+            Json { ignoreUnknownKeys = true },
         ),
         connectivity = FakeConnectivity(online),
         timeProvider = FixedTime(now),
         checkpoints = FakeCheckpointStore(),
+        foodCatalog = FakeFoodCatalogRepository(),
+        operations = PendingOperationQueue(
+            dao = FakeSyncOperationDao(),
+            timeProvider = FixedTime(now),
+            retryPolicy = RetryPolicy(),
+            json = Json { ignoreUnknownKeys = true },
+            ioDispatcher = dispatcher,
+        ),
         retryPolicy = RetryPolicy(),
         ioDispatcher = dispatcher,
     )
@@ -168,6 +182,30 @@ class SyncEngineTest {
     )
 }
 
+/** Never called in the offline test; present so the engine can be built. */
+private class FakeFoodCatalogRepository : FoodCatalogRepository {
+    override fun search(query: String): Flow<List<FoodCatalogItem>> = flowOf(emptyList())
+    override suspend fun refresh(): Outcome<Unit> = Outcome.success(Unit)
+}
+
+private class FakeSyncOperationDao : SyncOperationDao {
+    override suspend fun enqueue(operation: SyncOperationEntity): Long = 1L
+    override suspend fun getDue(nowEpochMillis: Long, limit: Int): List<SyncOperationEntity> =
+        emptyList()
+
+    override fun observeOutstandingCount(): Flow<Int> = flowOf(0)
+    override suspend fun updateState(
+        idempotencyKey: String,
+        state: String,
+        attempts: Int,
+        error: String?,
+        nextAttemptAtEpochMillis: Long?,
+    ) = Unit
+
+    override suspend fun remove(idempotencyKey: String) = Unit
+    override suspend fun clear() = Unit
+}
+
 private class FakeConnectivity(private val online: Boolean) : ConnectivityObserver {
     override val isOnline: Flow<Boolean> = flowOf(online)
     override fun isCurrentlyOnline(): Boolean = online
@@ -211,6 +249,9 @@ private class FakeMealDao(private val rows: List<MealWithItems>) : MealDao {
 
     override fun observeOutstandingCount(): Flow<Int> =
         flowOf(rows.count { it.meal.syncState != SyncState.SYNCED.name })
+
+    override fun observeFailedCount(): Flow<Int> =
+        flowOf(rows.count { it.meal.syncState == SyncState.FAILED.name })
 
     override suspend fun getUploadable(nowEpochMillis: Long, limit: Int): List<MealWithItems> =
         rows.filter { row ->

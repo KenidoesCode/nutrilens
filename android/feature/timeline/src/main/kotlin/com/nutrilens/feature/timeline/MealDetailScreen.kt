@@ -27,12 +27,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutrilens.core.designsystem.R as UiR
 import com.nutrilens.core.designsystem.component.EstimateDisclaimer
+import com.nutrilens.core.designsystem.component.FoodOption
+import com.nutrilens.core.designsystem.component.FoodPickerDialog
 import com.nutrilens.core.designsystem.component.LoadingState
 import com.nutrilens.core.designsystem.component.NutriLensCard
 import com.nutrilens.core.designsystem.component.SecondaryButton
 import com.nutrilens.core.designsystem.theme.Dimens
+import com.nutrilens.core.designsystem.format.asWholeGrams
+import com.nutrilens.core.designsystem.format.label
 import com.nutrilens.core.model.MealItem
-import kotlin.math.roundToInt
 
 /**
  * One stored meal.
@@ -44,11 +47,13 @@ import kotlin.math.roundToInt
 @Composable
 fun MealDetailRoute(
     onBack: () -> Unit,
+    onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MealDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var confirmingDelete by remember { mutableStateOf(false) }
+    var pickerItemId by remember { mutableStateOf<String?>(null) }
 
     // A deleted meal has no detail to show, so leave rather than render a blank.
     LaunchedEffect(uiState.isLoading, uiState.meal) {
@@ -70,7 +75,7 @@ fun MealDetailRoute(
     ) {
         item {
             Text(
-                text = stringResource(meal.mealType.labelRes()),
+                text = meal.mealType.label(),
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = Dimens.spaceMedium),
             )
@@ -81,6 +86,10 @@ fun MealDetailRoute(
         items(items = meal.items, key = { it.id }) { item ->
             MealItemRow(
                 item = item,
+                onChangeFood = {
+                    viewModel.onFoodQueryChanged("")
+                    pickerItemId = item.id
+                },
                 onRemove = { viewModel.onItemRemoved(item.id) },
             )
         }
@@ -98,7 +107,7 @@ fun MealDetailRoute(
                         text = meal.totalEnergyKcal?.let {
                             stringResource(
                                 UiR.string.analytics_energy_value,
-                                it.roundToInt().toString(),
+                                it.asWholeGrams(),
                             )
                         } ?: "—",
                         style = MaterialTheme.typography.bodyMedium,
@@ -115,16 +124,38 @@ fun MealDetailRoute(
         }
     }
 
+    pickerItemId?.let { itemId ->
+        FoodPickerDialog(
+            query = uiState.foodQuery,
+            results = uiState.foodResults.map {
+                FoodOption(key = it.foodKey, label = it.displayName, categoryLabel = it.category.label())
+            },
+            onQueryChange = viewModel::onFoodQueryChanged,
+            onSelect = { option ->
+                viewModel.onItemRenamed(itemId, option.label)
+                pickerItemId = null
+            },
+            // Renaming a stored item to free text would leave it without a
+            // density from the catalog, so only catalog foods are offered here.
+            onUseFreeText = { pickerItemId = null },
+            onDismiss = {
+                viewModel.onFoodPickerDismissed()
+                pickerItemId = null
+            },
+        )
+    }
+
     if (confirmingDelete) {
         AlertDialog(
             onDismissRequest = { confirmingDelete = false },
             title = { Text(stringResource(UiR.string.action_delete)) },
-            text = { Text(stringResource(UiR.string.meal_deleted)) },
+            text = { Text(stringResource(UiR.string.settings_delete_account_confirm_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         confirmingDelete = false
                         viewModel.onDeleteMeal()
+                        onDeleted()
                     },
                 ) {
                     Text(stringResource(UiR.string.action_delete))
@@ -140,7 +171,11 @@ fun MealDetailRoute(
 }
 
 @Composable
-private fun MealItemRow(item: MealItem, onRemove: () -> Unit) {
+private fun MealItemRow(
+    item: MealItem,
+    onChangeFood: () -> Unit,
+    onRemove: () -> Unit,
+) {
     NutriLensCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -152,7 +187,7 @@ private fun MealItemRow(item: MealItem, onRemove: () -> Unit) {
                 Text(
                     text = stringResource(
                         UiR.string.item_estimated_mass,
-                        item.estimatedMassGrams.roundToInt().toString(),
+                        item.estimatedMassGrams.asWholeGrams(),
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -166,11 +201,19 @@ private fun MealItemRow(item: MealItem, onRemove: () -> Unit) {
                     )
                 }
             }
-            TextButton(
-                onClick = onRemove,
-                modifier = Modifier.defaultMinSize(minHeight = Dimens.minimumTouchTarget),
-            ) {
-                Text(stringResource(UiR.string.item_remove))
+            Row {
+                TextButton(
+                    onClick = onChangeFood,
+                    modifier = Modifier.defaultMinSize(minHeight = Dimens.minimumTouchTarget),
+                ) {
+                    Text(stringResource(UiR.string.item_rename))
+                }
+                TextButton(
+                    onClick = onRemove,
+                    modifier = Modifier.defaultMinSize(minHeight = Dimens.minimumTouchTarget),
+                ) {
+                    Text(stringResource(UiR.string.item_remove))
+                }
             }
         }
     }

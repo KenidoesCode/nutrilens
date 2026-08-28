@@ -48,6 +48,16 @@ interface MealDao {
     fun observeOutstandingCount(): Flow<Int>
 
     /**
+     * Meals that have stopped retrying.
+     *
+     * Counted separately from the outstanding total because "waiting to
+     * upload" and "could not upload" call for different things to be said to
+     * the user.
+     */
+    @Query("SELECT COUNT(*) FROM meals WHERE syncState = 'FAILED'")
+    fun observeFailedCount(): Flow<Int>
+
+    /**
      * Meals due for an upload attempt.
      *
      * Rows whose backoff window has not elapsed are excluded here rather than

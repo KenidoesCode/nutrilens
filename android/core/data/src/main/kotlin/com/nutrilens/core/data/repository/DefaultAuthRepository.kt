@@ -13,6 +13,7 @@ import com.nutrilens.core.datastore.UserPreferencesStore
 import com.nutrilens.core.model.AppError
 import com.nutrilens.core.model.AppLanguage
 import com.nutrilens.core.model.Outcome
+import com.nutrilens.core.model.onSuccess
 import com.nutrilens.core.model.UserProfile
 import com.nutrilens.core.model.repository.AuthRepository
 import com.nutrilens.core.network.ApiErrorMapper
@@ -20,12 +21,13 @@ import com.nutrilens.core.network.api.NutriLensApi
 import com.nutrilens.core.network.dto.LoginRequestDto
 import com.nutrilens.core.network.dto.LogoutRequestDto
 import com.nutrilens.core.network.dto.RegisterRequestDto
+import com.nutrilens.core.network.dto.UserUpdateRequestDto
 import com.nutrilens.core.network.dto.TokenResponseDto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import javax.inject.Inject
@@ -54,9 +56,28 @@ class DefaultAuthRepository @Inject constructor(
 
     private val cachedProfile = MutableStateFlow<UserProfile?>(null)
 
-    override val currentUser: Flow<UserProfile?> = cachedProfile.asStateFlow()
+    /**
+     * The signed-in user.
+     *
+     * The stored token pair is what defines "signed in"; the profile is a cache
+     * on top of it. On a cold start that cache is empty, so the first collector
+     * triggers a fetch -- without it, a user who restarted the app would see a
+     * blank name and an empty profile screen despite having a valid session.
+     *
+     * The fetch is best-effort: it happens off the critical path, and a failure
+     * leaves the app usable with the profile simply absent rather than blocking
+     * on the network.
+     */
+    override val currentUser: Flow<UserProfile?> = cachedProfile
+        .onStart { ensureProfileLoaded() }
 
     override val isAuthenticated: Flow<Boolean> = tokenStore.tokens.map { it != null }
+
+    private suspend fun ensureProfileLoaded() {
+        if (cachedProfile.value != null) return
+        if (tokenStore.read() == null) return
+        loadProfile()
+    }
 
     override suspend fun register(
         email: String,
@@ -98,8 +119,48 @@ class DefaultAuthRepository @Inject constructor(
         Outcome.success(Unit)
     }
 
-    override suspend fun refreshProfile(): Outcome<UserProfile> = withContext(ioDispatcher) {
-        loadProfile()
+    /**
+     * Delete the account.
+     *
+     * The server is told first. If that fails the local data is kept and the
+     * error is reported, because wiping the device while the account still
+     * exists would leave the person signed out of data they did not delete and
+     * unable to reach it.
+     */
+    override suspend fun deleteAccount(): Outcome<Unit> = withContext(ioDispatcher) {
+        val outcome = errorMapper.executeUnit { api.deleteAccount() }
+        when {
+            outcome is Outcome.Success -> {
+                clearLocalState()
+                Outcome.success(Unit)
+            }
+
+            // The account is already gone server-side; finishing locally is
+            // what the user asked for.
+            outcome is Outcome.Failure && outcome.error == AppError.SessionExpired -> {
+                clearLocalState()
+                Outcome.success(Unit)
+            }
+
+            else -> outcome
+        }
+    }
+
+    override suspend fun pushProfileUpdate(
+        displayName: String? = null,
+        timezone: String? = null,
+        locale: String? = null,
+    ) = withContext(ioDispatcher) {
+        errorMapper.execute {
+            api.updateProfile(
+                UserUpdateRequestDto(
+                    displayName = displayName,
+                    timezone = timezone,
+                    locale = locale,
+                ),
+            )
+        }.onSuccess { cachedProfile.value = it.toDomain() }
+        Unit
     }
 
     private suspend fun storeTokens(response: TokenResponseDto): Outcome<Unit> = try {

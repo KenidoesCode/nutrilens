@@ -48,7 +48,6 @@
     <string name="home_capture_meal">భోజనం ఫోటో తీయండి</string>
     <string name="home_no_meals_title">ఈ రోజు ఇంకా భోజనం నమోదు కాలేదు</string>
     <string name="home_no_meals_body">మీ తదుపరి భోజనం ఫోటో తీయండి. పళ్ళెంలో ఏమి ఉందో NutriLens అంచనా వేస్తుంది.</string>
-    <string name="home_meals_today">ఈ రోజు భోజనాలు</string>
     <string name="home_recent_meals">ఇటీవలి భోజనాలు</string>
     <string name="home_view_all">అన్నీ చూడండి</string>
 
@@ -66,10 +65,8 @@
     <string name="window_empty_content_description">%1$s నాడు ఏ భోజనం నమోదు కాలేదు.</string>
 
     <!-- Capture -->
-    <string name="capture_title">భోజనం ఫోటో</string>
     <string name="capture_instruction">భోజనం మొత్తాన్ని ఫ్రేమ్ లోపల ఉంచండి.</string>
     <string name="capture_hint_reference">పళ్ళెం లేదా తెలిసిన వస్తువు ఫ్రేమ్‌లో ఉంటే పరిమాణ అంచనా మెరుగవుతుంది.</string>
-    <string name="capture_shutter">ఫోటో తీయండి</string>
     <string name="capture_shutter_content_description">మీ భోజనం ఫోటో తీయండి</string>
     <string name="capture_permission_title">కెమెరా అనుమతి కావాలి</string>
     <string name="capture_permission_body">భోజనాల ఫోటో తీయడానికి NutriLens కు కెమెరా అవసరం. సెట్టింగ్‌లలో మీరు అనుమతించే వరకు ఫోటోలు మీ ఫోన్‌లోనే ఉంటాయి.</string>
@@ -99,13 +96,11 @@
     <string name="item_mass_grams">%1$s g</string>
     <string name="item_volume_millilitres">%1$s ml</string>
     <string name="item_estimated_mass">అంచనా %1$s g</string>
-    <string name="item_confidence_percent">%1$d%% నమ్మకం</string>
     <string name="item_confidence_high">ఎక్కువ నమ్మకం</string>
     <string name="item_confidence_medium">మధ్యస్థ నమ్మకం</string>
     <string name="item_confidence_low">తక్కువ నమ్మకం</string>
     <string name="item_confidence_content_description">%1$s, %2$d శాతం</string>
     <string name="item_fallback_density_notice">ఈ రకమైన ఆహారానికి సాధారణ సాంద్రతతో అంచనా వేయబడింది.</string>
-    <string name="item_edit">మార్చండి</string>
     <string name="item_remove">తీసివేయండి</string>
     <string name="item_adjust_portion">పరిమాణం సరిచేయండి</string>
     <string name="item_rename">ఆహారాన్ని మార్చండి</string>
@@ -117,11 +112,9 @@
     <!-- Portion adjustment -->
     <string name="portion_title">పరిమాణం సరిచేయండి</string>
     <string name="portion_estimated_volume">అంచనా ఘనపరిమాణం</string>
-    <string name="portion_your_volume">మీ అంచనా</string>
     <string name="portion_resulting_mass">ఇది సుమారు %1$s g</string>
     <string name="portion_save">సేవ్ చేయండి</string>
     <string name="portion_cancel">రద్దు చేయండి</string>
-    <string name="portion_invalid">1 నుండి 3000 ml మధ్య విలువను నమోదు చేయండి.</string>
 
     <!-- Food picker -->
     <string name="food_picker_title">ఆహారాన్ని మార్చండి</string>
@@ -177,7 +170,6 @@
     <string name="settings_not_medical_advice">NutriLens ఒక నమోదు మరియు అంచనా సాధనం మాత్రమే. ఇది వైద్య సలహా, రోగ నిర్ధారణ లేదా చికిత్సను అందించదు.</string>
 
     <!-- Sync -->
-    <string name="sync_all_synced">అన్ని భోజనాలు సేవ్ అయ్యాయి</string>
     <string name="sync_pending">%1$d భోజనం అప్‌లోడ్ కోసం వేచి ఉంది</string>
     <string name="sync_pending_plural">%1$d భోజనాలు అప్‌లోడ్ కోసం వేచి ఉన్నాయి</string>
     <string name="sync_offline">ఇంటర్నెట్ లేదు. మీ భోజనాలు ఈ ఫోన్‌లో సేవ్ అయ్యాయి, తర్వాత వాటంతట అవే అప్‌లోడ్ అవుతాయి.</string>
@@ -208,16 +200,12 @@
     <!-- Navigation -->
     <string name="nav_home">హోమ్</string>
     <string name="nav_timeline">కాలరేఖ</string>
-    <string name="nav_capture">ఫోటో</string>
     <string name="nav_analytics">అలవాట్లు</string>
     <string name="nav_profile">ప్రొఫైల్</string>
-    <string name="nav_back">వెనుకకు</string>
 
     <!-- Confirmations -->
     <string name="meal_saved">భోజనం నమోదు చేయబడింది</string>
     <string name="meal_deleted">భోజనం తొలగించబడింది</string>
     <string name="action_delete">తొలగించండి</string>
     <string name="action_cancel">రద్దు చేయండి</string>
-    <string name="action_save">సేవ్ చేయండి</string>
-    <string name="action_undo">రద్దు చేయండి</string>
 </resources>

@@ -117,6 +117,14 @@ and a row that simply vanished would leave a stale copy on a device forever.
 The exception is a locally-deleted meal that never reached the server. There is
 nothing to inform, so the row is purged outright.
 
+### Item edits are queued separately from meal creation
+
+`meals` carries its own sync state, which covers creating and deleting. Edits
+need their own queue because re-uploading an edited meal under its original
+idempotency key is a *replay*: the server returns it unchanged and the edit is
+lost. Edits therefore travel as item-level operations keyed by the server's own
+item ids, which the client learns from the push response.
+
 ### AI predictions are stored apart from the final record
 
 `ai_predictions` keeps the engine's verbatim structured output; `meal_items`
@@ -204,7 +212,7 @@ Room mirrors the server's shape with the sync columns the device needs:
 | `meals` | plus `syncState`, `syncAttempts`, `nextAttemptAtEpochMillis`, `idempotencyKey` |
 | `meal_items` | cascade delete from `meals` |
 | `food_catalog` | cached, so food correction works offline |
-| `sync_queue` | operations other than meal creation |
+| `sync_queue` | queued item edits, each with its own key and backoff |
 
 `exportSchema = true` writes the schema JSON into `core/database/schemas/`,
 which is committed. That file is what makes a future migration reviewable and

@@ -24,7 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,7 +40,9 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.shouldShowRationale
 import com.google.accompanist.permissions.rememberPermissionState
 import com.nutrilens.core.designsystem.R as UiR
 import com.nutrilens.core.designsystem.component.EmptyState
@@ -65,6 +70,7 @@ fun CaptureRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
+    var hasRequestedOnce by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(uiState.capturedImagePath) {
         uiState.capturedImagePath?.let { path ->
@@ -75,7 +81,15 @@ fun CaptureRoute(
 
     if (!cameraPermission.status.isGranted) {
         CameraPermissionScreen(
-            onGrant = cameraPermission::launchPermissionRequest,
+            // Once the system stops showing the dialog, asking again does
+            // nothing; say so rather than offering a button that cannot work.
+            wasDeclined = !cameraPermission.status.shouldShowRationale &&
+                cameraPermission.status is PermissionStatus.Denied &&
+                hasRequestedOnce,
+            onGrant = {
+                hasRequestedOnce = true
+                cameraPermission.launchPermissionRequest()
+            },
             onLogManually = onCancel,
             modifier = modifier,
         )
@@ -94,6 +108,7 @@ fun CaptureRoute(
 
 @Composable
 private fun CameraPermissionScreen(
+    wasDeclined: Boolean,
     onGrant: () -> Unit,
     onLogManually: () -> Unit,
     modifier: Modifier = Modifier,
@@ -106,13 +121,21 @@ private fun CameraPermissionScreen(
     ) {
         EmptyState(
             title = stringResource(UiR.string.capture_permission_title),
-            description = stringResource(UiR.string.capture_permission_body),
+            description = stringResource(
+                if (wasDeclined) {
+                    UiR.string.capture_permission_denied
+                } else {
+                    UiR.string.capture_permission_body
+                },
+            ),
         )
-        PrimaryButton(
-            text = stringResource(UiR.string.capture_permission_grant),
-            onClick = onGrant,
-            modifier = Modifier.padding(top = Dimens.spaceMedium),
-        )
+        if (!wasDeclined) {
+            PrimaryButton(
+                text = stringResource(UiR.string.capture_permission_grant),
+                onClick = onGrant,
+                modifier = Modifier.padding(top = Dimens.spaceMedium),
+            )
+        }
         SecondaryButton(
             text = stringResource(UiR.string.capture_log_manually),
             onClick = onLogManually,

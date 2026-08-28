@@ -4,10 +4,10 @@ import com.nutrilens.core.model.AnalysisResult
 import com.nutrilens.core.model.AppLanguage
 import com.nutrilens.core.model.EatingPatternSummary
 import com.nutrilens.core.model.EatingWindow
+import com.nutrilens.core.model.NutritionTotals
 import com.nutrilens.core.model.FoodCatalogItem
 import com.nutrilens.core.model.Meal
 import com.nutrilens.core.model.Outcome
-import com.nutrilens.core.model.SyncState
 import com.nutrilens.core.model.UserProfile
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -41,20 +41,28 @@ interface AuthRepository {
 
     suspend fun logout(): Outcome<Unit>
 
-    /** Refresh the profile from the server; local data stays usable on failure. */
-    suspend fun refreshProfile(): Outcome<UserProfile>
+    /** Permanently delete this account, server-side and locally. */
+    suspend fun deleteAccount(): Outcome<Unit>
+
+    /**
+     * Push a profile change to the server.
+     *
+     * Best-effort: the setting is already applied locally and the app computes
+     * its analytics from the device, so a failed round trip costs consistency
+     * with the account rather than function.
+     */
+    suspend fun pushProfileUpdate(
+        displayName: String? = null,
+        timezone: String? = null,
+        locale: String? = null,
+    )
 }
 
 interface MealRepository {
     /** Every meal, newest first. Local-first: emits before any network call. */
     fun observeMeals(): Flow<List<Meal>>
 
-    fun observeMealsBetween(start: Instant, end: Instant): Flow<List<Meal>>
-
     fun observeMeal(mealId: String): Flow<Meal?>
-
-    /** Count of records still owing the server an upload, for the sync banner. */
-    fun observePendingSyncCount(): Flow<Int>
 
     /**
      * Save a meal locally and queue it for upload.
@@ -96,12 +104,27 @@ interface AnalyticsRepository {
     fun observeTodayWindow(): Flow<EatingWindow>
 
     fun observePatternSummary(startDay: LocalDate, endDay: LocalDate): Flow<EatingPatternSummary>
+
+    /**
+     * Summed nutrition estimates over a range.
+     *
+     * Computed from the local database so the figures are correct offline and
+     * update the instant a portion is corrected.
+     */
+    fun observeNutritionTotals(startDay: LocalDate, endDay: LocalDate): Flow<NutritionTotals>
 }
 
 interface FoodCatalogRepository {
     /** Search the catalog for the food-correction picker. */
     fun search(query: String): Flow<List<FoodCatalogItem>>
 
+    /**
+     * Fetch the catalog from the server into the local cache.
+     *
+     * Called as part of every sync pass, not on demand from a screen: the
+     * picker has to work offline, so the cache must already be warm by the
+     * time a user opens it.
+     */
     suspend fun refresh(): Outcome<Unit>
 }
 
@@ -113,14 +136,25 @@ interface SyncRepository {
     suspend fun requestSync()
 }
 
-/** What the UI needs to tell the user about synchronisation. */
+/**
+ * What the UI needs to tell the user about synchronisation.
+ *
+ * A count and a timestamp rather than a spinner: the user's real question is
+ * whether their data is safe, and "3 meals waiting to upload" answers it.
+ */
 data class SyncStatus(
     val pendingCount: Int,
-    val state: SyncState,
+    val failedCount: Int,
     val lastSyncedAt: Instant?,
-    val lastError: String? = null,
+    val isOnline: Boolean,
 ) {
-    val isFullySynced: Boolean get() = pendingCount == 0 && state == SyncState.SYNCED
+    /**
+     * Whether there is anything to say at all.
+     *
+     * A permanent "all synced" badge is noise people learn to ignore, so the
+     * banner is shown only when this is false.
+     */
+    val isFullySynced: Boolean get() = pendingCount == 0 && failedCount == 0
 }
 
 interface SettingsRepository {
@@ -135,4 +169,12 @@ interface SettingsRepository {
 
     /** Erase every local record. Used on sign-out and account deletion. */
     suspend fun clearLocalData()
+
+    /**
+     * Serialise this account's meal records for the user to keep.
+     *
+     * Returns JSON rather than writing a file, so the screen can hand it to the
+     * system document picker and let the person choose where it goes.
+     */
+    suspend fun exportDataAsJson(): Outcome<String>
 }

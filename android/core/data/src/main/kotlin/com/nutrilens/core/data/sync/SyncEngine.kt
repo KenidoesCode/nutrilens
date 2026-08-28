@@ -11,9 +11,15 @@ import com.nutrilens.core.database.entity.MealWithItems
 import com.nutrilens.core.model.AppError
 import com.nutrilens.core.model.Outcome
 import com.nutrilens.core.model.SyncState
+import com.nutrilens.core.model.repository.FoodCatalogRepository
 import com.nutrilens.core.model.sync.RetryPolicy
 import com.nutrilens.core.network.ApiErrorMapper
 import com.nutrilens.core.network.api.NutriLensApi
+import com.nutrilens.core.network.dto.MealDto
+import com.nutrilens.core.network.dto.PortionCorrectionDto
+import com.nutrilens.core.network.dto.RenameItemDto
+import com.nutrilens.core.network.dto.SyncPushOperationDto
+import com.nutrilens.core.network.dto.SyncPushRequestDto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -29,9 +35,10 @@ data class SyncOutcome(
     val pulled: Int,
     val failed: Int,
     val exhausted: Int,
+    val edits: Int = 0,
     val stoppedBecauseOffline: Boolean = false,
 ) {
-    val didAnything: Boolean get() = uploaded + deleted + pulled > 0
+    val didAnything: Boolean get() = uploaded + deleted + pulled + edits > 0
     val hasFailures: Boolean get() = failed > 0 || exhausted > 0
 }
 
@@ -58,6 +65,8 @@ class SyncEngine @Inject constructor(
     private val connectivity: ConnectivityObserver,
     private val timeProvider: TimeProvider,
     private val checkpoints: SyncCheckpointStore,
+    private val foodCatalog: FoodCatalogRepository,
+    private val operations: PendingOperationQueue,
     private val retryPolicy: RetryPolicy,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
@@ -67,39 +76,128 @@ class SyncEngine @Inject constructor(
             return@withContext SyncOutcome(0, 0, 0, 0, 0, stoppedBecauseOffline = true)
         }
 
+        // Edits first. An edit belongs to a meal the server already has, and
+        // applying it before pulling avoids a pull overwriting it with the
+        // pre-edit copy.
+        val edits = pushEdits()
         val pushed = push()
         val pulled = pull()
+
+        // The food picker has to work offline, so the catalog is refreshed as
+        // part of every sync pass rather than fetched when a screen asks for
+        // it. Its failure does not affect the sync outcome: a stale catalog is
+        // a degraded picker, not a lost meal.
+        refreshFoodCatalog()
 
         if (pushed.failed == 0 && pushed.exhausted == 0) {
             checkpoints.setLastSyncedAt(timeProvider.now().toEpochMilli())
         }
 
-        pushed.copy(pulled = pulled)
+        pushed.copy(pulled = pulled, edits = edits)
     }
 
-    /** Upload every eligible local change. */
+    /**
+     * Upload every eligible local change, in one request.
+     *
+     * The batch endpoint applies each operation independently and reports them
+     * individually, so a single malformed meal fails alone while the rest
+     * apply. Batching matters most in exactly the situation this feature
+     * exists for: a device that has been offline for a day reconnects with a
+     * dozen meals queued and makes one round trip instead of a dozen.
+     */
     private suspend fun push(): SyncOutcome {
+        val now = timeProvider.now().toEpochMilli()
+        val batch = mealDao.getUploadable(now, UPLOAD_BATCH_SIZE)
+        if (batch.isEmpty()) return SyncOutcome(0, 0, 0, 0, 0)
+
+        // A meal deleted before it ever reached the server has nothing to
+        // delete remotely, so it never enters the batch.
+        val (locallyOnly, uploadable) = batch.partition {
+            it.meal.isDeleted && it.meal.remoteId == null
+        }
+        locallyOnly.forEach { mealDao.purgeDeleted(it.meal.id) }
+
+        if (uploadable.isEmpty()) {
+            return SyncOutcome(0, locallyOnly.size, 0, 0, 0)
+        }
+
+        uploadable.forEach { markSyncing(it) }
+
+        val operations = uploadable.map { row ->
+            if (row.meal.isDeleted) {
+                SyncPushOperationDto(
+                    idempotencyKey = row.meal.idempotencyKey,
+                    operation = OPERATION_DELETE,
+                    mealId = row.meal.remoteId,
+                )
+            } else {
+                SyncPushOperationDto(
+                    idempotencyKey = row.meal.idempotencyKey,
+                    operation = OPERATION_CREATE,
+                    meal = row.toDomain().toCreateDto(row.meal.idempotencyKey),
+                )
+            }
+        }
+
+        val response = errorMapper.execute { api.pushSync(SyncPushRequestDto(operations)) }
+        if (response is Outcome.Failure) {
+            // The batch never reached the server. Every row is recorded as one
+            // failed attempt, so backoff applies to the batch as a whole rather
+            // than each meal burning its budget on the same outage.
+            var exhausted = 0
+            uploadable.forEach { if (recordFailure(it, response.error)) exhausted++ }
+            return SyncOutcome(0, locallyOnly.size, 0, uploadable.size - exhausted, exhausted)
+        }
+
+        val results = (response as Outcome.Success).data.results.associateBy { it.idempotencyKey }
+
         var uploaded = 0
-        var deleted = 0
+        var deleted = locallyOnly.size
         var failed = 0
         var exhausted = 0
 
-        val now = timeProvider.now().toEpochMilli()
-        val batch = mealDao.getUploadable(now, UPLOAD_BATCH_SIZE)
+        for (row in uploadable) {
+            val result = results[row.meal.idempotencyKey]
+            when {
+                result == null -> {
+                    // The server did not report on this operation at all, which
+                    // is a contract violation; treat it as retryable rather
+                    // than assuming either outcome.
+                    if (recordFailure(row, AppError.ServerError(MISSING_RESULT))) {
+                        exhausted++
+                    } else {
+                        failed++
+                    }
+                }
 
-        for (row in batch) {
-            markSyncing(row)
-            val result = if (row.meal.isDeleted) {
-                uploadDeletion(row)
-            } else {
-                uploadCreation(row)
-            }
+                result.status == STATUS_FAILED -> {
+                    if (recordFailure(row, mapOperationError(result.errorCode))) {
+                        exhausted++
+                    } else {
+                        failed++
+                    }
+                }
 
-            when (result) {
-                is Outcome.Success -> if (row.meal.isDeleted) deleted++ else uploaded++
-                is Outcome.Failure -> {
-                    val terminal = recordFailure(row, result.error)
-                    if (terminal) exhausted++ else failed++
+                row.meal.isDeleted -> {
+                    mealDao.purgeDeleted(row.meal.id)
+                    deleted++
+                }
+
+                else -> {
+                    val meal = result.meal
+                    if (meal == null) {
+                        // Accepted, but without the meal there are no server
+                        // item ids, so a later correction could not be sent.
+                        // Mark it synced and let the next pull supply them.
+                        mealDao.markSynced(
+                            mealId = row.meal.id,
+                            remoteId = result.entityId.orEmpty(),
+                            updatedAtEpochMillis = timeProvider.now().toEpochMilli(),
+                        )
+                    } else {
+                        adoptServerMeal(row, meal)
+                    }
+                    uploaded++
                 }
             }
         }
@@ -107,40 +205,101 @@ class SyncEngine @Inject constructor(
         return SyncOutcome(uploaded, deleted, 0, failed, exhausted)
     }
 
-    private suspend fun uploadCreation(row: MealWithItems): Outcome<Unit> {
-        val meal = row.toDomain()
-        val response = errorMapper.execute {
-            api.createMeal(meal.toCreateDto(row.meal.idempotencyKey))
-        }
-        return response.map { dto ->
-            mealDao.markSynced(
-                mealId = row.meal.id,
-                remoteId = dto.id,
-                updatedAtEpochMillis = timeProvider.now().toEpochMilli(),
-            )
-        }
+    /**
+     * Translate a per-operation error code into the domain taxonomy.
+     *
+     * Unknown codes are treated as server errors, which are retryable: an
+     * unrecognised code is more likely a newer server than a permanently
+     * invalid meal, and discarding a user's meal on that guess would be worse
+     * than one wasted retry.
+     */
+    private fun mapOperationError(code: String?): AppError = when (code) {
+        CODE_VALIDATION_FAILED -> AppError.DeviceError(code)
+        CODE_NOT_FOUND -> AppError.NotFound
+        CODE_CONFLICT -> AppError.DeviceError(code)
+        else -> AppError.ServerError(code)
     }
 
-    private suspend fun uploadDeletion(row: MealWithItems): Outcome<Unit> {
-        // A meal deleted before it ever synced has nothing to delete remotely;
-        // the local row can simply go.
-        val remoteId = row.meal.remoteId
-            ?: return Outcome.success(Unit).also { mealDao.purgeDeleted(row.meal.id) }
+    /**
+     * Apply queued edits through the item endpoints.
+     *
+     * Re-uploading an edited meal does not work: the server treats the original
+     * idempotency key as a replay and returns the meal unchanged, so the edit
+     * would be silently discarded. Item-level endpoints addressed by the
+     * server's own ids are the only path that actually applies a correction.
+     */
+    private suspend fun pushEdits(): Int {
+        var applied = 0
 
-        val response = errorMapper.executeUnit { api.deleteMeal(remoteId) }
-        return when {
-            response is Outcome.Success -> {
-                mealDao.purgeDeleted(row.meal.id)
-                Outcome.success(Unit)
+        for (queued in operations.due()) {
+            val result: Outcome<Unit> = when (val operation = queued.operation) {
+                is PendingOperation.CorrectPortion -> errorMapper.execute {
+                    api.correctPortion(
+                        operation.remoteItemId,
+                        PortionCorrectionDto(operation.volumeMl),
+                    )
+                }.map { }
+
+                is PendingOperation.RenameItem -> errorMapper.execute {
+                    api.renameItem(operation.remoteItemId, RenameItemDto(operation.displayName))
+                }.map { }
+
+                is PendingOperation.RemoveItem ->
+                    errorMapper.executeUnit { api.removeItem(operation.remoteItemId) }
             }
-            // Already gone server-side: the intent is satisfied, so treat it as
-            // success rather than retrying a deletion that can never succeed.
-            response is Outcome.Failure && response.error == AppError.NotFound -> {
-                mealDao.purgeDeleted(row.meal.id)
-                Outcome.success(Unit)
+
+            when {
+                result is Outcome.Success -> {
+                    operations.markSucceeded(queued.idempotencyKey)
+                    applied++
+                }
+
+                // The item is already gone server-side, so the intent is
+                // satisfied. Retrying a deletion that can never succeed would
+                // block every operation queued behind it.
+                result is Outcome.Failure && result.error == AppError.NotFound -> {
+                    operations.markSucceeded(queued.idempotencyKey)
+                    applied++
+                }
+
+                result is Outcome.Failure -> operations.markFailed(
+                    idempotencyKey = queued.idempotencyKey,
+                    attempts = queued.attempts,
+                    retryable = result.error.isRetryable,
+                    error = describe(result.error),
+                )
             }
-            else -> response as Outcome.Failure
         }
+
+        return applied
+    }
+
+    /**
+     * Replace a local meal with what the server stored.
+     *
+     * The server recomputes mass from its own density table and assigns its own
+     * item ids. Adopting both matters: without the ids a later correction
+     * cannot be addressed to an item at all, and without the masses the local
+     * copy silently drifts from what every other device sees.
+     *
+     * The local meal id and image are kept. The id is what every local
+     * reference uses, and the client generated it precisely so it would never
+     * have to change.
+     */
+    private suspend fun adoptServerMeal(row: MealWithItems, dto: MealDto) {
+        val server = dto.toDomain(localImagePath = row.meal.localImagePath)
+        val now = timeProvider.now()
+
+        mealDao.upsertMealWithItems(
+            server.copy(
+                id = row.meal.id,
+                remoteId = dto.id,
+                syncState = SyncState.SYNCED,
+                createdAt = Instant.ofEpochMilli(row.meal.createdAtEpochMillis),
+                updatedAt = now,
+            ).toEntity(idempotencyKey = row.meal.idempotencyKey),
+            server.items.mapIndexed { index, item -> item.toEntity(row.meal.id, index) },
+        )
     }
 
     private suspend fun markSyncing(row: MealWithItems) {
@@ -173,6 +332,10 @@ class SyncEngine @Inject constructor(
             updatedAtEpochMillis = now,
         )
         return !retryable
+    }
+
+    private suspend fun refreshFoodCatalog() {
+        foodCatalog.refresh()
     }
 
     /** Fetch server-side changes and reconcile them locally. */
@@ -231,5 +394,14 @@ class SyncEngine @Inject constructor(
 
     private companion object {
         const val UPLOAD_BATCH_SIZE = 25
+
+        const val OPERATION_CREATE = "create_meal"
+        const val OPERATION_DELETE = "delete_meal"
+        const val STATUS_FAILED = "failed"
+        const val MISSING_RESULT = "MISSING_OPERATION_RESULT"
+
+        const val CODE_VALIDATION_FAILED = "VALIDATION_FAILED"
+        const val CODE_NOT_FOUND = "NOT_FOUND"
+        const val CODE_CONFLICT = "CONFLICT"
     }
 }

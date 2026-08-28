@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nutrilens.core.common.time.TimeProvider
 import com.nutrilens.core.model.EatingPatternSummary
+import com.nutrilens.core.model.NutritionTotals
 import com.nutrilens.core.model.repository.AnalyticsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -11,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import javax.inject.Inject
@@ -27,6 +27,7 @@ data class AnalyticsUiState(
     val isLoading: Boolean = true,
     val range: AnalyticsRange = AnalyticsRange.WEEK,
     val summary: EatingPatternSummary? = null,
+    val nutrition: NutritionTotals = NutritionTotals.EMPTY,
 ) {
     val hasData: Boolean get() = (summary?.daysWithMeals ?: 0) > 0
 }
@@ -45,11 +46,18 @@ class AnalyticsViewModel @Inject constructor(
         // than leaving two collectors racing to set the same state.
         .flatMapLatest { range ->
             val today = LocalDate.now(timeProvider.currentZone())
-            analyticsRepository
-                .observePatternSummary(today.minusDays(range.days - 1), today)
-                .map { summary ->
-                    AnalyticsUiState(isLoading = false, range = range, summary = summary)
-                }
+            val start = today.minusDays(range.days - 1)
+            combine(
+                analyticsRepository.observePatternSummary(start, today),
+                analyticsRepository.observeNutritionTotals(start, today),
+            ) { summary, nutrition ->
+                AnalyticsUiState(
+                    isLoading = false,
+                    range = range,
+                    summary = summary,
+                    nutrition = nutrition,
+                )
+            }
         }
         .stateIn(
             scope = viewModelScope,

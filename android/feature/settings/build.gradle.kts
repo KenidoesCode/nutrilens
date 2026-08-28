@@ -14,6 +14,10 @@ android {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        // A library module has no VERSION_NAME of its own, and the About
+        // section needs one. Declared here so the value has a single source.
+        buildConfigField("String", "VERSION_NAME", "\"0.1.0\"")
     }
 
     compileOptions {
@@ -29,6 +33,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {

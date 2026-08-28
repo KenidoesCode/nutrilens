@@ -50,7 +50,6 @@
     <string name="home_capture_meal">Capture a meal</string>
     <string name="home_no_meals_title">No meals yet today</string>
     <string name="home_no_meals_body">Photograph your next meal and NutriLens will estimate what is on the plate.</string>
-    <string name="home_meals_today">Meals today</string>
     <string name="home_recent_meals">Recent meals</string>
     <string name="home_view_all">View all</string>
 
@@ -68,10 +67,8 @@
     <string name="window_empty_content_description">No meals logged on %1$s.</string>
 
     <!-- Capture -->
-    <string name="capture_title">Capture meal</string>
     <string name="capture_instruction">Place the whole meal inside the frame.</string>
     <string name="capture_hint_reference">Including a plate or a familiar object in frame improves the portion estimate.</string>
-    <string name="capture_shutter">Capture</string>
     <string name="capture_shutter_content_description">Take a photograph of your meal</string>
     <string name="capture_permission_title">Camera access needed</string>
     <string name="capture_permission_body">NutriLens needs the camera to photograph your meals. Photographs stay on your device unless you turn on remote storage in Settings.</string>
@@ -101,13 +98,11 @@
     <string name="item_mass_grams">%1$s g</string>
     <string name="item_volume_millilitres">%1$s ml</string>
     <string name="item_estimated_mass">Estimated %1$s g</string>
-    <string name="item_confidence_percent">%1$d%% confidence</string>
     <string name="item_confidence_high">High confidence</string>
     <string name="item_confidence_medium">Medium confidence</string>
     <string name="item_confidence_low">Low confidence</string>
     <string name="item_confidence_content_description">%1$s, %2$d percent</string>
     <string name="item_fallback_density_notice">Estimated with a general density for this kind of food.</string>
-    <string name="item_edit">Edit</string>
     <string name="item_remove">Remove</string>
     <string name="item_adjust_portion">Adjust portion</string>
     <string name="item_rename">Change food</string>
@@ -119,11 +114,9 @@
     <!-- Portion adjustment -->
     <string name="portion_title">Adjust portion</string>
     <string name="portion_estimated_volume">Estimated volume</string>
-    <string name="portion_your_volume">Your estimate</string>
     <string name="portion_resulting_mass">That is about %1$s g</string>
     <string name="portion_save">Save</string>
     <string name="portion_cancel">Cancel</string>
-    <string name="portion_invalid">Enter a volume between 1 and 3000 ml.</string>
 
     <!-- Food picker -->
     <string name="food_picker_title">Change food</string>
@@ -179,7 +172,6 @@
     <string name="settings_not_medical_advice">NutriLens is a tracking and estimation tool. It does not provide medical advice, diagnosis or treatment.</string>
 
     <!-- Sync -->
-    <string name="sync_all_synced">All meals saved</string>
     <string name="sync_pending">%1$d meal waiting to upload</string>
     <string name="sync_pending_plural">%1$d meals waiting to upload</string>
     <string name="sync_offline">Offline. Your meals are saved on this device and will upload automatically.</string>
@@ -210,16 +202,12 @@
     <!-- Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_timeline">Timeline</string>
-    <string name="nav_capture">Capture</string>
     <string name="nav_analytics">Patterns</string>
     <string name="nav_profile">Profile</string>
-    <string name="nav_back">Back</string>
 
     <!-- Confirmations -->
     <string name="meal_saved">Meal logged</string>
     <string name="meal_deleted">Meal deleted</string>
     <string name="action_delete">Delete</string>
     <string name="action_cancel">Cancel</string>
-    <string name="action_save">Save</string>
-    <string name="action_undo">Undo</string>
 </resources>

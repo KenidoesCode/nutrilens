@@ -1,5 +1,7 @@
 package com.nutrilens.feature.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -32,12 +35,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutrilens.core.designsystem.R as UiR
+import com.nutrilens.core.designsystem.component.ErrorState
 import com.nutrilens.core.designsystem.component.NutriLensCard
+import com.nutrilens.core.designsystem.component.PrimaryButton
 import com.nutrilens.core.designsystem.component.SecondaryButton
 import com.nutrilens.core.designsystem.component.SectionHeader
 import com.nutrilens.core.designsystem.theme.Dimens
 import com.nutrilens.core.designsystem.theme.NutriLensTheme
 import com.nutrilens.core.model.AppLanguage
+import com.nutrilens.feature.settings.BuildConfig
 
 @Composable
 fun SettingsRoute(
@@ -47,26 +53,55 @@ fun SettingsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val signedOut by viewModel.signedOut.collectAsStateWithLifecycle()
+    val pendingExport by viewModel.pendingExport.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(signedOut) {
         if (signedOut) onSignedOut()
+    }
+
+    // The system document picker chooses the destination, so the export lands
+    // wherever the person wants it and the app needs no storage permission and
+    // no FileProvider.
+    val createDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(EXPORT_MIME_TYPE),
+    ) { uri ->
+        val export = pendingExport
+        if (uri != null && export != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(export.json.toByteArray())
+                }
+            }
+        }
+        viewModel.onExportHandled()
+    }
+
+    LaunchedEffect(pendingExport) {
+        pendingExport?.let { createDocument.launch(it.fileName) }
     }
 
     SettingsScreen(
         uiState = uiState,
         onLanguageSelected = viewModel::onLanguageSelected,
         onStoreImagesRemotelyChanged = viewModel::onStoreImagesRemotelyChanged,
+        onExport = viewModel::onExportRequested,
+        onExportErrorDismissed = viewModel::onExportErrorDismissed,
         onSignOut = viewModel::onSignOut,
         onDeleteAccount = viewModel::onDeleteAccount,
         modifier = modifier,
     )
 }
 
+private const val EXPORT_MIME_TYPE = "application/json"
+
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
     onLanguageSelected: (AppLanguage) -> Unit,
     onStoreImagesRemotelyChanged: (Boolean) -> Unit,
+    onExport: () -> Unit,
+    onExportErrorDismissed: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
     modifier: Modifier = Modifier,
@@ -136,12 +171,40 @@ fun SettingsScreen(
             )
         }
 
+        SectionHeader(title = stringResource(UiR.string.settings_data))
+        NutriLensCard {
+            Text(
+                text = stringResource(UiR.string.settings_export_explainer),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            uiState.exportError?.let {
+                ErrorState(
+                    message = stringResource(UiR.string.error_device),
+                    retryLabel = stringResource(UiR.string.error_generic_retry),
+                    onRetry = onExportErrorDismissed,
+                )
+            }
+            PrimaryButton(
+                text = stringResource(UiR.string.settings_export),
+                onClick = onExport,
+                loading = uiState.isExporting,
+                modifier = Modifier.padding(top = Dimens.spaceSmall),
+            )
+        }
+
         SectionHeader(title = stringResource(UiR.string.settings_about))
         NutriLensCard {
             Text(
                 text = stringResource(UiR.string.settings_not_medical_advice),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(UiR.string.settings_version, BuildConfig.VERSION_NAME),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Dimens.spaceSmall),
             )
         }
 
@@ -219,6 +282,8 @@ private fun SettingsScreenPreview() {
             uiState = SettingsUiState(),
             onLanguageSelected = {},
             onStoreImagesRemotelyChanged = {},
+            onExport = {},
+            onExportErrorDismissed = {},
             onSignOut = {},
             onDeleteAccount = {},
         )

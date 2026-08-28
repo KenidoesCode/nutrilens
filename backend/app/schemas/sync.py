@@ -47,6 +47,14 @@ class SyncOperationResult(BaseModel):
     idempotency_key: str
     status: str = Field(description="applied | replayed | failed")
     entity_id: str | None = None
+    meal: MealResponse | None = Field(
+        default=None,
+        description=(
+            "The stored meal, for create operations. Returned so a client can "
+            "adopt the server's item ids -- without them it cannot address an "
+            "individual item to correct it later."
+        ),
+    )
     error_code: str | None = None
     error_message: str | None = None
 

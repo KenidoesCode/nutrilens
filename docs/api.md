@@ -145,6 +145,11 @@ Paginated, newest first, `limit` (max 100) and `offset`, with an optional
 Recomputes mass and nutrition, preserves `original_mass_g`, and appends to the
 item's portion-estimate history.
 
+**This is the only way an edit reaches the server.** Re-sending the whole meal
+would carry its original idempotency key, which makes it a replay: the server
+returns the stored meal unchanged and the correction is silently lost. See
+[offline-sync.md](offline-sync.md#why-edits-do-not-go-through-the-same-path).
+
 ### `PATCH /meals/items/{item_id}/name` -> `200`
 
 Correcting a misidentified food re-resolves its density and recomputes the mass.
@@ -222,13 +227,23 @@ A batch of queued client operations, each with its own idempotency key.
 ```json
 {
   "results": [
-    { "idempotency_key": "op-00000001", "status": "applied", "entity_id": "..." },
+    {
+      "idempotency_key": "op-00000001",
+      "status": "applied",
+      "entity_id": "6f0f...",
+      "meal": { "id": "6f0f...", "items": [{ "id": "a1b2...", "...": 0 }] }
+    },
     { "idempotency_key": "op-00000002", "status": "replayed", "entity_id": "..." }
   ],
   "applied": 1, "replayed": 1, "failed": 0,
   "server_time": "2026-05-01T12:00:00Z"
 }
 ```
+
+A `create_meal` result carries the **stored meal**, not just its id, and so does
+a replay. The client needs the server's item ids: they are the only way to
+address an individual item in a later correction, and a client that lost the
+original response would otherwise be permanently unable to send one.
 
 **Each operation is validated and applied independently.** One malformed meal
 reports `failed` while the rest still apply. This is the whole point of

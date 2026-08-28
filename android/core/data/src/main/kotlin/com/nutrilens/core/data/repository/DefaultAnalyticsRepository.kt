@@ -6,6 +6,7 @@ import com.nutrilens.core.database.dao.MealDao
 import com.nutrilens.core.model.ChrononutritionCalculator
 import com.nutrilens.core.model.EatingPatternSummary
 import com.nutrilens.core.model.EatingWindow
+import com.nutrilens.core.model.NutritionTotals
 import com.nutrilens.core.model.repository.AnalyticsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -48,17 +49,28 @@ class DefaultAnalyticsRepository @Inject constructor(
         endDay: LocalDate,
     ): Flow<EatingPatternSummary> {
         val zone = timeProvider.currentZone()
+        return observeRange(startDay, endDay).map { meals ->
+            ChrononutritionCalculator.summarise(meals, zone, startDay, endDay)
+        }
+    }
+
+    override fun observeNutritionTotals(
+        startDay: LocalDate,
+        endDay: LocalDate,
+    ): Flow<NutritionTotals> =
+        observeRange(startDay, endDay).map(NutritionTotals::from)
+
+    /**
+     * Meals in the logical days `[startDay, endDay]`.
+     *
+     * The window is bounded by the 04:00 day boundary rather than midnight, so
+     * a late-night meal is counted on the day the user experienced it.
+     */
+    private fun observeRange(startDay: LocalDate, endDay: LocalDate) = run {
+        val zone = timeProvider.currentZone()
         val start = ChrononutritionCalculator.startOfLogicalDay(startDay, zone)
         val end = ChrononutritionCalculator.startOfLogicalDay(endDay.plusDays(1), zone)
-
-        return mealDao.observeBetween(start.toEpochMilli(), end.toEpochMilli())
-            .map { rows ->
-                ChrononutritionCalculator.summarise(
-                    rows.map { it.toDomain() },
-                    zone,
-                    startDay,
-                    endDay,
-                )
-            }
+        mealDao.observeBetween(start.toEpochMilli(), end.toEpochMilli())
+            .map { rows -> rows.map { it.toDomain() } }
     }
 }

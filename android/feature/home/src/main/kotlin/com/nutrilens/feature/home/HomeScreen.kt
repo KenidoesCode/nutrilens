@@ -27,10 +27,16 @@ import com.nutrilens.core.designsystem.theme.Dimens
 import com.nutrilens.core.designsystem.theme.NutriLensTheme
 import com.nutrilens.core.model.EatingWindow
 import com.nutrilens.core.model.Meal
+import com.nutrilens.core.designsystem.component.SyncStatusBanner
+import com.nutrilens.core.designsystem.format.toMessage
 import com.nutrilens.feature.home.component.EatingWindowCard
 import com.nutrilens.feature.home.component.MealSummaryRow
-import com.nutrilens.feature.home.component.SyncStatusRow
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun HomeRoute(
@@ -85,11 +91,17 @@ fun HomeScreen(
             )
         }
 
-        // The sync row only appears when there is something to say. A permanent
+        // The banner appears only when there is something to say. A permanent
         // "all synced" badge is noise the user learns to ignore.
-        if (!uiState.syncStatus.isFullySynced) {
+        uiState.syncStatus.toMessage(::relativeTimeLabel)?.let { sync ->
             item {
-                SyncStatusRow(status = uiState.syncStatus, onRetry = onRefresh)
+                SyncStatusBanner(
+                    message = sync.message,
+                    detail = sync.detail,
+                    retryLabel = sync.retryLabel,
+                    onRetry = onRefresh.takeIf { sync.retryLabel != null },
+                    isProblem = sync.isProblem,
+                )
             }
         }
 
@@ -136,6 +148,24 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) { }
         }
+    }
+}
+
+/**
+ * "2 hours ago", or a date once that stops being useful.
+ *
+ * Relative wording is what a person actually wants from a last-synced line;
+ * an absolute timestamp makes them do the arithmetic.
+ */
+private fun relativeTimeLabel(instant: Instant): String {
+    val elapsed = Duration.between(instant, Instant.now())
+    return when {
+        elapsed.toMinutes() < 1 -> "just now"
+        elapsed.toHours() < 1 -> "${elapsed.toMinutes()}m ago"
+        elapsed.toDays() < 1 -> "${elapsed.toHours()}h ago"
+        else -> DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
+            .withZone(ZoneId.systemDefault())
+            .format(instant)
     }
 }
 

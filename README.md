@@ -47,8 +47,8 @@ nutrilens/
 | | Tests | Runs without the Android SDK |
 |---|---|---|
 | `ml/` | 149 | yes |
-| `backend/` | 177 | yes |
-| `android/core/model` | 53 | yes |
+| `backend/` | 181 | yes |
+| `android/core/model` | 67 | yes |
 | `android/**` (rest) | — | no |
 
 ## Architecture
@@ -146,6 +146,14 @@ PENDING → SYNCING → SYNCED
 
 - Idempotency keys generated once per record and reused on every retry, so a
   request the server already applied is recognised rather than duplicated.
+- **Edits take a different route from creations.** Re-uploading an edited meal
+  is a *replay* — the server returns the stored meal unchanged and the
+  correction is silently lost. Edits therefore go through the item endpoints,
+  addressed by the server's own item ids, queued durably with their own backoff.
+  This was a real bug, caught by a written reproduction and now pinned by
+  regression tests.
+- Uploads are batched: a device that has been offline for a day reconnects and
+  makes one request, not a dozen.
 - Exponential backoff with **full jitter** — without it, every device that failed
   during an outage retries simultaneously and re-creates it.
 - Permanent rejections do not consume the retry budget.
@@ -222,8 +230,8 @@ Without Docker: `make setup && make migrate && make seed && make run`.
 ### Tests
 
 ```bash
-make test            # 326 Python tests
-make verify-domain   # 53 Kotlin tests, no Android SDK needed
+make test            # 330 Python tests
+make verify-domain   # 67 Kotlin tests, no Android SDK needed
 make check           # lint + both of the above
 ```
 
@@ -266,11 +274,16 @@ What that means in practice:
 
 - The Gradle configuration, module graph, manifest, resources and ProGuard rules
   are complete and the build commands above are the real ones.
-- `android/core/model` — the domain layer, ~1,400 lines including the
-  chrononutrition calculator and the retry policy — **is** compiled and tested
-  by `make verify-domain`, which runs in CI and needs no Android SDK.
+- `android/core/model` — the domain layer, including the chrononutrition
+  calculator, the nutrition aggregation and the retry policy — **is** compiled
+  and tested by `make verify-domain`, which runs in CI and needs no Android SDK.
 - The remaining Android modules are unverified by compilation. Expect to fix
   compilation errors on a first build.
+- They have instead been checked by static audit: every internal import resolves
+  to a real declaration, every interface implementation is complete, every
+  declared module dependency is used, every string resource is referenced and
+  present in both languages, and there are no unused imports. That catches
+  structural breakage, not type errors.
 
 This is stated here rather than buried because the honest status of a deliverable
 matters more than the appearance of completeness.
@@ -290,6 +303,8 @@ matters more than the appearance of completeness.
    there; an S3 implementation is not.
 9. **Rate limiting without Redis is per-process.**
 10. **No Compose UI tests.** The harness is configured; the suite is not written.
+11. **The two halves of sync have not been run against each other.** Each side is
+    tested on its own.
 
 ## Where this would go next
 

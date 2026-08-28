@@ -10,7 +10,6 @@ import com.nutrilens.core.model.repository.AuthRepository
 import com.nutrilens.core.model.repository.MealRepository
 import com.nutrilens.core.model.repository.SyncRepository
 import com.nutrilens.core.model.repository.SyncStatus
-import com.nutrilens.core.model.SyncState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,8 +27,9 @@ data class HomeUiState(
     val recentMeals: List<Meal> = emptyList(),
     val syncStatus: SyncStatus = SyncStatus(
         pendingCount = 0,
-        state = SyncState.SYNCED,
+        failedCount = 0,
         lastSyncedAt = null,
+        isOnline = true,
     ),
 ) {
     val hasMealsToday: Boolean get() = todayWindow.hasMeals

@@ -1,10 +1,10 @@
 package com.nutrilens.core.data.repository
 
 import androidx.work.WorkManager
+import com.nutrilens.core.common.network.ConnectivityObserver
+import com.nutrilens.core.data.sync.SyncCheckpointStore
 import com.nutrilens.core.data.sync.SyncWorker
 import com.nutrilens.core.database.dao.MealDao
-import com.nutrilens.core.datastore.UserPreferencesStore
-import com.nutrilens.core.model.SyncState
 import com.nutrilens.core.model.repository.SyncRepository
 import com.nutrilens.core.model.repository.SyncStatus
 import kotlinx.coroutines.flow.Flow
@@ -16,25 +16,31 @@ import javax.inject.Singleton
 /**
  * The sync status shown to the user.
  *
- * A count and a timestamp, not a spinner: the user's real question is "is my
- * data safe", and "3 meals waiting to upload" answers it honestly while
- * "syncing..." does not.
+ * Four separate facts, because they call for four different things to be said:
+ * how many meals are waiting, how many have stopped retrying, whether the
+ * device is online at all, and when the last full sync succeeded. Collapsing
+ * them into one spinner would leave the user unable to tell "uploading" from
+ * "cannot upload", which is the difference they actually care about.
  */
 @Singleton
 class DefaultSyncRepository @Inject constructor(
     private val mealDao: MealDao,
-    private val preferences: UserPreferencesStore,
+    private val checkpoints: SyncCheckpointStore,
+    private val connectivity: ConnectivityObserver,
     private val workManager: WorkManager,
 ) : SyncRepository {
 
     override fun observeSyncState(): Flow<SyncStatus> = combine(
         mealDao.observeOutstandingCount(),
-        preferences.lastSyncedAtEpochMillis,
-    ) { pending, lastSyncedAt ->
+        mealDao.observeFailedCount(),
+        checkpoints.lastSyncedAtEpochMillis,
+        connectivity.isOnline,
+    ) { pending, failed, lastSyncedAt, online ->
         SyncStatus(
             pendingCount = pending,
-            state = if (pending == 0) SyncState.SYNCED else SyncState.PENDING,
+            failedCount = failed,
             lastSyncedAt = lastSyncedAt?.let(Instant::ofEpochMilli),
+            isOnline = online,
         )
     }
 

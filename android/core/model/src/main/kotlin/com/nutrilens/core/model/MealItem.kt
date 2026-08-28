@@ -70,6 +70,45 @@ data class MealItem(
         const val USER_CORRECTION_CONFIDENCE = 0.9f
 
         /**
+         * Build an item the user entered by hand rather than one the model
+         * proposed.
+         *
+         * Recognition confidence is 1.0 -- the person told us what the food is,
+         * and that is the one thing here nobody is estimating. The portion is
+         * still their estimate, so it carries the same 0.9 a correction does.
+         */
+        fun userEntered(
+            id: String,
+            displayName: String,
+            category: FoodCategory,
+            volumeMl: Double,
+            densityGramsPerMl: Double,
+            densitySource: String,
+            foodKey: String? = null,
+            isFallbackDensity: Boolean = false,
+            energyKcalPer100g: Double? = null,
+        ): MealItem {
+            require(volumeMl > 0) { "Volume must be positive" }
+            val mass = volumeMl * densityGramsPerMl
+            return MealItem(
+                id = id,
+                displayName = displayName,
+                foodKey = foodKey,
+                category = category,
+                estimatedVolumeMl = volumeMl,
+                estimatedMassGrams = mass,
+                densityGramsPerMl = densityGramsPerMl,
+                densitySource = densitySource,
+                isFallbackDensity = isFallbackDensity,
+                recognitionConfidence = 1.0f,
+                portionConfidence = USER_CORRECTION_CONFIDENCE,
+                portionMethod = "user-entered",
+                energyKcal = energyKcalPer100g?.let { it * mass / 100.0 },
+                wasUserCorrected = true,
+            )
+        }
+
+        /**
          * Density confidence used when reconstructing [overallConfidence] locally.
          *
          * The server sends a per-food density confidence; these two constants

@@ -4,14 +4,8 @@ import com.nutrilens.core.network.dto.AnalysisResponseDto
 import com.nutrilens.core.network.dto.FoodDto
 import com.nutrilens.core.network.dto.LoginRequestDto
 import com.nutrilens.core.network.dto.LogoutRequestDto
-import com.nutrilens.core.network.dto.MealCreateDto
-import com.nutrilens.core.network.dto.MealDto
 import com.nutrilens.core.network.dto.MealItemDto
-import com.nutrilens.core.network.dto.MealPageDto
-import com.nutrilens.core.network.dto.NutritionTotalsDto
 import com.nutrilens.core.network.dto.PortionCorrectionDto
-import com.nutrilens.core.network.dto.RangePatternDto
-import com.nutrilens.core.network.dto.RefreshRequestDto
 import com.nutrilens.core.network.dto.RegisterRequestDto
 import com.nutrilens.core.network.dto.RenameItemDto
 import com.nutrilens.core.network.dto.SyncPullResponseDto
@@ -40,6 +34,14 @@ import retrofit2.http.Query
  * and the server's structured error are needed to distinguish "your session
  * expired" from "you are rate limited", and swallowing them into an exception
  * would lose exactly the information the UI needs.
+ *
+ * The server exposes more than this, and the gaps are deliberate. Reading meals
+ * and computing analytics are served from the local database so they work
+ * offline. Creating and deleting a meal go through `/sync/push`, which applies
+ * a whole queue in one request and reports each operation separately. Session
+ * refresh has its own single-purpose interface, so a failing refresh cannot
+ * recurse through this one's authenticator. A client method for an endpoint the
+ * client never calls is dead code.
  */
 interface NutriLensApi {
 
@@ -50,9 +52,6 @@ interface NutriLensApi {
 
     @POST("api/v1/auth/login")
     suspend fun login(@Body body: LoginRequestDto): Response<TokenResponseDto>
-
-    @POST("api/v1/auth/refresh")
-    suspend fun refresh(@Body body: RefreshRequestDto): Response<TokenResponseDto>
 
     @POST("api/v1/auth/logout")
     suspend fun logout(@Body body: LogoutRequestDto): Response<Unit>
@@ -69,21 +68,6 @@ interface NutriLensApi {
     suspend fun deleteAccount(): Response<Unit>
 
     // --- meals -----------------------------------------------------------
-
-    @POST("api/v1/meals")
-    suspend fun createMeal(@Body body: MealCreateDto): Response<MealDto>
-
-    @GET("api/v1/meals")
-    suspend fun listMeals(
-        @Query("limit") limit: Int = 20,
-        @Query("offset") offset: Int = 0,
-    ): Response<MealPageDto>
-
-    @GET("api/v1/meals/{mealId}")
-    suspend fun getMeal(@Path("mealId") mealId: String): Response<MealDto>
-
-    @DELETE("api/v1/meals/{mealId}")
-    suspend fun deleteMeal(@Path("mealId") mealId: String): Response<Unit>
 
     @PATCH("api/v1/meals/items/{itemId}/portion")
     suspend fun correctPortion(
@@ -117,20 +101,6 @@ interface NutriLensApi {
         @Part("reference_real_area_cm2") referenceRealAreaCm2: RequestBody? = null,
         @Part("reference_image_area_ratio") referenceImageAreaRatio: RequestBody? = null,
     ): Response<AnalysisResponseDto>
-
-    // --- analytics -------------------------------------------------------
-
-    @GET("api/v1/analytics/range")
-    suspend fun getRangePattern(
-        @Query("start_day") startDay: String,
-        @Query("end_day") endDay: String,
-    ): Response<RangePatternDto>
-
-    @GET("api/v1/analytics/nutrition")
-    suspend fun getNutritionTotals(
-        @Query("start_day") startDay: String,
-        @Query("end_day") endDay: String,
-    ): Response<NutritionTotalsDto>
 
     // --- catalog ---------------------------------------------------------
 

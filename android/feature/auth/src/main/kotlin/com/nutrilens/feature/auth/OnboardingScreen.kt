@@ -47,6 +47,11 @@ fun OnboardingRoute(
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
+            text = stringResource(UiR.string.app_tagline),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
             text = stringResource(UiR.string.onboarding_subtitle),
             style = MaterialTheme.typography.headlineSmall,
         )

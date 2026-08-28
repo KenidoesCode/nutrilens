@@ -1,5 +1,6 @@
 package com.nutrilens.feature.analysis.component
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -24,11 +26,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.nutrilens.core.designsystem.R as UiR
 import com.nutrilens.core.designsystem.component.ConfidenceIndicator
-import com.nutrilens.core.designsystem.component.ConfidenceLevel
 import com.nutrilens.core.designsystem.component.NutriLensCard
 import com.nutrilens.core.designsystem.theme.Dimens
 import com.nutrilens.core.designsystem.theme.NutriLensTheme
-import com.nutrilens.core.model.ConfidenceBand
+import com.nutrilens.core.designsystem.format.asWholeGrams
+import com.nutrilens.core.designsystem.format.label
+import com.nutrilens.core.designsystem.format.toUiLevel
 import com.nutrilens.core.model.FoodCategory
 import com.nutrilens.core.model.MealItem
 import kotlin.math.roundToInt
@@ -45,11 +48,12 @@ import kotlin.math.roundToInt
 fun AnalyzedItemCard(
     item: MealItem,
     onAdjustPortion: () -> Unit,
+    onChangeFood: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val confidencePercent = (item.recognitionConfidence * 100).roundToInt()
-    val bandLabel = stringResource(item.recognitionBand.labelRes())
+    val bandLabel = item.recognitionBand.label()
 
     NutriLensCard(modifier = modifier) {
         Row(
@@ -60,7 +64,7 @@ fun AnalyzedItemCard(
             Column(modifier = Modifier.padding(end = Dimens.spaceSmall)) {
                 Text(text = item.displayName, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = stringResource(item.category.labelRes()),
+                    text = item.category.label(),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -68,7 +72,7 @@ fun AnalyzedItemCard(
             Text(
                 text = stringResource(
                     UiR.string.item_estimated_mass,
-                    item.estimatedMassGrams.roundToInt().toString(),
+                    item.estimatedMassGrams.asWholeGrams(),
                 ),
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -104,8 +108,12 @@ fun AnalyzedItemCard(
             )
         }
 
+        // Horizontally scrollable so three actions still fit at a large font
+        // scale rather than wrapping into an unreadable stack.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(
@@ -113,6 +121,12 @@ fun AnalyzedItemCard(
                 modifier = Modifier.defaultMinSize(minHeight = Dimens.minimumTouchTarget),
             ) {
                 Text(stringResource(UiR.string.item_adjust_portion))
+            }
+            TextButton(
+                onClick = onChangeFood,
+                modifier = Modifier.defaultMinSize(minHeight = Dimens.minimumTouchTarget),
+            ) {
+                Text(stringResource(UiR.string.item_rename))
             }
             TextButton(
                 onClick = onRemove,
@@ -147,6 +161,17 @@ fun PortionAdjustDialog(
         title = { Text(stringResource(UiR.string.portion_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Dimens.spaceSmall)) {
+                // The original estimate stays on screen so the user can see
+                // what they are changing it from, and change their mind.
+                Text(
+                    text = stringResource(UiR.string.portion_estimated_volume) + ": " +
+                        stringResource(
+                            UiR.string.item_volume_millilitres,
+                            item.estimatedVolumeMl.roundToInt().toString(),
+                        ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(
                     text = stringResource(
                         UiR.string.item_volume_millilitres,
@@ -190,24 +215,6 @@ fun PortionAdjustDialog(
 private const val MIN_VOLUME_ML = 5f
 private const val MAX_VOLUME_ML = 1500f
 
-internal fun ConfidenceBand.toUiLevel(): ConfidenceLevel = when (this) {
-    ConfidenceBand.LOW -> ConfidenceLevel.LOW
-    ConfidenceBand.MEDIUM -> ConfidenceLevel.MEDIUM
-    ConfidenceBand.HIGH -> ConfidenceLevel.HIGH
-}
-
-internal fun ConfidenceBand.labelRes(): Int = when (this) {
-    ConfidenceBand.LOW -> UiR.string.item_confidence_low
-    ConfidenceBand.MEDIUM -> UiR.string.item_confidence_medium
-    ConfidenceBand.HIGH -> UiR.string.item_confidence_high
-}
-
-internal fun FoodCategory.labelRes(): Int = when (this) {
-    FoodCategory.SOLID -> UiR.string.item_category_solid
-    FoodCategory.SEMISOLID -> UiR.string.item_category_semisolid
-    FoodCategory.LIQUID -> UiR.string.item_category_liquid
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun AnalyzedItemCardPreview() {
@@ -229,6 +236,7 @@ private fun AnalyzedItemCardPreview() {
                     portionConfidence = 0.65f,
                 ),
                 onAdjustPortion = {},
+                onChangeFood = {},
                 onRemove = {},
             )
             AnalyzedItemCard(
@@ -245,6 +253,7 @@ private fun AnalyzedItemCardPreview() {
                     portionConfidence = 0.42f,
                 ),
                 onAdjustPortion = {},
+                onChangeFood = {},
                 onRemove = {},
             )
         }

@@ -14,9 +14,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -29,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.nutrilens.core.designsystem.R
+import kotlinx.coroutines.launch
 import com.nutrilens.feature.analysis.AnalysisRoute
 import com.nutrilens.feature.analytics.AnalyticsRoute
 import com.nutrilens.feature.auth.AuthRoute
@@ -56,7 +61,16 @@ fun NutriLensApp(
     val currentDestination = backStackEntry?.destination
     val showChrome = currentDestination?.route in Destination.topLevel.map { it.route }
 
+    // Hosted here rather than per screen: the confirmations that matter fire
+    // as a screen is being navigated away from, so a host inside that screen
+    // would be torn down before it could show anything.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val mealSavedMessage = stringResource(R.string.meal_saved)
+    val mealDeletedMessage = stringResource(R.string.meal_deleted)
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showChrome) {
                 NutriLensBottomBar(
@@ -85,7 +99,16 @@ fun NutriLensApp(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            NutriLensNavHost(navController = navController, startDestination = startDestination)
+            NutriLensNavHost(
+                navController = navController,
+                startDestination = startDestination,
+                onMealSaved = {
+                    scope.launch { snackbarHostState.showSnackbar(mealSavedMessage) }
+                },
+                onMealDeleted = {
+                    scope.launch { snackbarHostState.showSnackbar(mealDeletedMessage) }
+                },
+            )
         }
     }
 }
@@ -94,6 +117,8 @@ fun NutriLensApp(
 private fun NutriLensNavHost(
     navController: NavHostController,
     startDestination: String,
+    onMealSaved: () -> Unit,
+    onMealDeleted: () -> Unit,
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
 
@@ -148,6 +173,7 @@ private fun NutriLensNavHost(
         ) {
             AnalysisRoute(
                 onMealSaved = {
+                    onMealSaved()
                     navController.navigate(Destination.Home.route) {
                         popUpTo(Destination.Home.route) { inclusive = true }
                     }
@@ -170,7 +196,10 @@ private fun NutriLensNavHost(
                 navArgument(Destination.ARG_MEAL_ID) { type = NavType.StringType },
             ),
         ) {
-            MealDetailRoute(onBack = navController::popBackStack)
+            MealDetailRoute(
+                onBack = navController::popBackStack,
+                onDeleted = onMealDeleted,
+            )
         }
 
         composable(Destination.Analytics.route) {

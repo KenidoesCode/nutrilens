@@ -5,10 +5,13 @@ import com.nutrilens.core.common.di.IoDispatcher
 import com.nutrilens.core.common.time.TimeProvider
 import com.nutrilens.core.data.mapper.toDomain
 import com.nutrilens.core.data.mapper.toEntity
+import com.nutrilens.core.data.sync.PendingOperation
+import com.nutrilens.core.data.sync.PendingOperationQueue
 import com.nutrilens.core.data.sync.SyncEngine
 import com.nutrilens.core.data.sync.SyncWorker
 import com.nutrilens.core.database.dao.FoodCatalogDao
 import com.nutrilens.core.database.dao.MealDao
+import com.nutrilens.core.database.entity.MealWithItems
 import com.nutrilens.core.model.AppError
 import com.nutrilens.core.model.Meal
 import com.nutrilens.core.model.MealItem
@@ -20,7 +23,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,6 +39,7 @@ import javax.inject.Singleton
 class OfflineFirstMealRepository @Inject constructor(
     private val mealDao: MealDao,
     private val foodCatalogDao: FoodCatalogDao,
+    private val operations: PendingOperationQueue,
     private val syncEngine: SyncEngine,
     private val workManager: WorkManager,
     private val timeProvider: TimeProvider,
@@ -46,14 +49,8 @@ class OfflineFirstMealRepository @Inject constructor(
     override fun observeMeals(): Flow<List<Meal>> =
         mealDao.observeAll().map { rows -> rows.map { it.toDomain() } }
 
-    override fun observeMealsBetween(start: Instant, end: Instant): Flow<List<Meal>> =
-        mealDao.observeBetween(start.toEpochMilli(), end.toEpochMilli())
-            .map { rows -> rows.map { it.toDomain() } }
-
     override fun observeMeal(mealId: String): Flow<Meal?> =
         mealDao.observeById(mealId).map { it?.toDomain() }
-
-    override fun observePendingSyncCount(): Flow<Int> = mealDao.observeOutstandingCount()
 
     override suspend fun logMeal(meal: Meal): Outcome<Meal> = withContext(ioDispatcher) {
         if (meal.items.isEmpty()) {
@@ -89,7 +86,13 @@ class OfflineFirstMealRepository @Inject constructor(
         mealId: String,
         itemId: String,
         correctedVolumeMl: Double,
-    ): Outcome<Meal> = mutateItem(mealId, itemId) { item ->
+    ): Outcome<Meal> = mutateItem(
+        mealId = mealId,
+        itemId = itemId,
+        remoteOperation = { remoteMealId, _ ->
+            PendingOperation.CorrectPortion(remoteMealId, itemId, correctedVolumeMl)
+        },
+    ) { item ->
         item.withCorrectedVolume(correctedVolumeMl)
     }
 
@@ -118,7 +121,13 @@ class OfflineFirstMealRepository @Inject constructor(
                 ?: foodCatalogDao.search(trimmed, limit = 1).first().firstOrNull()
         }
 
-        return mutateItem(mealId, itemId) { item ->
+        return mutateItem(
+            mealId = mealId,
+            itemId = itemId,
+            remoteOperation = { remoteMealId, _ ->
+                PendingOperation.RenameItem(remoteMealId, itemId, trimmed)
+            },
+        ) { item ->
             val density = catalogEntry?.densityGramsPerMl
             val mass = density?.let { item.estimatedVolumeMl * it }
             val energyPer100g = catalogEntry?.energyKcalPer100g
@@ -156,8 +165,9 @@ class OfflineFirstMealRepository @Inject constructor(
 
     override suspend fun removeItem(mealId: String, itemId: String): Outcome<Meal> =
         withContext(ioDispatcher) {
-            val existing = mealDao.getById(mealId)?.toDomain()
+            val row = mealDao.getById(mealId)
                 ?: return@withContext Outcome.failure(AppError.NotFound)
+            val existing = row.toDomain()
 
             val remaining = existing.items.filterNot { it.id == itemId }
             if (remaining.size == existing.items.size) {
@@ -169,7 +179,11 @@ class OfflineFirstMealRepository @Inject constructor(
                 return@withContext deleteMeal(mealId).map { existing }
             }
 
-            persist(existing.copy(items = remaining))
+            row.meal.remoteId?.let { remoteMealId ->
+                operations.enqueue(PendingOperation.RemoveItem(remoteMealId, itemId))
+            }
+
+            persist(row, existing.copy(items = remaining))
         }
 
     override suspend fun deleteMeal(mealId: String): Outcome<Unit> = withContext(ioDispatcher) {
@@ -198,14 +212,15 @@ class OfflineFirstMealRepository @Inject constructor(
     private suspend fun mutateItem(
         mealId: String,
         itemId: String,
+        remoteOperation: (remoteMealId: String, item: MealItem) -> PendingOperation?,
         transform: (MealItem) -> MealItem,
     ): Outcome<Meal> = withContext(ioDispatcher) {
-        val existing = mealDao.getById(mealId)?.toDomain()
+        val row = mealDao.getById(mealId)
             ?: return@withContext Outcome.failure(AppError.NotFound)
+        val existing = row.toDomain()
 
-        if (existing.items.none { it.id == itemId }) {
-            return@withContext Outcome.failure(AppError.NotFound)
-        }
+        val target = existing.items.firstOrNull { it.id == itemId }
+            ?: return@withContext Outcome.failure(AppError.NotFound)
 
         val updated = try {
             existing.copy(
@@ -215,19 +230,32 @@ class OfflineFirstMealRepository @Inject constructor(
             return@withContext Outcome.failure(AppError.DeviceError(e.message))
         }
 
-        persist(updated)
+        row.meal.remoteId?.let { remoteMealId ->
+            remoteOperation(remoteMealId, target)?.let { operations.enqueue(it) }
+        }
+
+        persist(row, updated)
     }
 
-    /** Write an edited meal back and re-queue it for upload. */
-    private suspend fun persist(meal: Meal): Outcome<Meal> {
-        val row = mealDao.getById(meal.id)
-            ?: return Outcome.failure(AppError.NotFound)
-
+    /**
+     * Write an edited meal back.
+     *
+     * How the edit reaches the server depends on whether the server has the
+     * meal yet:
+     *
+     * - **Not yet uploaded.** The row stays `PENDING` and the whole meal is
+     *   uploaded once, already carrying the edit.
+     * - **Already uploaded.** The edit was queued as an item operation by the
+     *   caller and the row stays `SYNCED`. Re-uploading would be worse than
+     *   useless: the server treats the original idempotency key as a replay and
+     *   returns the meal unchanged, so the edit would be silently discarded.
+     */
+    private suspend fun persist(row: MealWithItems, meal: Meal): Outcome<Meal> {
+        val alreadyOnServer = row.meal.remoteId != null
         val updated = meal.copy(
             updatedAt = timeProvider.now(),
-            // An edit makes the server's copy stale, so the record owes an
-            // upload again even if it was previously SYNCED.
-            syncState = SyncState.PENDING,
+            syncState = if (alreadyOnServer) SyncState.SYNCED else SyncState.PENDING,
+            remoteId = row.meal.remoteId,
         )
 
         return try {

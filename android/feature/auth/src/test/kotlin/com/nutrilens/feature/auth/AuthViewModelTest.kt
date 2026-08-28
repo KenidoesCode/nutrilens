@@ -258,7 +258,13 @@ private class FakeAuthRepository : AuthRepository {
 
     override suspend fun logout(): Outcome<Unit> = Outcome.success(Unit)
 
-    override suspend fun refreshProfile(): Outcome<UserProfile> = loginResult
+    override suspend fun deleteAccount(): Outcome<Unit> = Outcome.success(Unit)
+
+    override suspend fun pushProfileUpdate(
+        displayName: String?,
+        timezone: String?,
+        locale: String?,
+    ) = Unit
 }
 
 private class FakeSettingsRepository : SettingsRepository {
@@ -274,4 +280,6 @@ private class FakeSettingsRepository : SettingsRepository {
     override suspend fun setStoreImagesRemotely(enabled: Boolean) = Unit
 
     override suspend fun clearLocalData() = Unit
+
+    override suspend fun exportDataAsJson(): Outcome<String> = Outcome.success("{}")
 }

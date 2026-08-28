@@ -156,6 +156,10 @@ def _apply(
             idempotency_key=operation.idempotency_key,
             status="replayed" if result.was_replay else "applied",
             entity_id=str(result.meal.id),
+            # The client needs the server's item ids to address an item in a
+            # later correction, so the stored meal comes back rather than just
+            # its id.
+            meal=MealResponse.from_model(result.meal),
         )
 
     if operation.operation == "delete_meal":

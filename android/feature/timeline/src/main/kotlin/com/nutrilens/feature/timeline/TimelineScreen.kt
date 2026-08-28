@@ -27,12 +27,12 @@ import com.nutrilens.core.designsystem.component.LoadingState
 import com.nutrilens.core.designsystem.component.NutriLensCard
 import com.nutrilens.core.designsystem.component.SectionHeader
 import com.nutrilens.core.designsystem.theme.Dimens
+import com.nutrilens.core.designsystem.format.asWholeGrams
+import com.nutrilens.core.designsystem.format.label
 import com.nutrilens.core.model.Meal
-import com.nutrilens.core.model.MealType
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import kotlin.math.roundToInt
 
 @Composable
 fun TimelineRoute(
@@ -75,9 +75,9 @@ fun TimelineRoute(
 
 @Composable
 private fun TimelineMealRow(meal: Meal, onClick: () -> Unit) {
-    val label = stringResource(meal.mealType.labelRes())
+    val label = meal.mealType.label()
     val time = meal.localDateTime.toLocalTime().format(timeFormatter)
-    val mass = meal.totalMassGrams.roundToInt()
+    val mass = meal.totalMassGrams.asWholeGrams()
 
     NutriLensCard(
         modifier = Modifier
@@ -121,11 +121,3 @@ private val timeFormatter: DateTimeFormatter =
 private val dateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
-internal fun MealType.labelRes(): Int = when (this) {
-    MealType.BREAKFAST -> UiR.string.meal_type_breakfast
-    MealType.LUNCH -> UiR.string.meal_type_lunch
-    MealType.DINNER -> UiR.string.meal_type_dinner
-    MealType.SNACK -> UiR.string.meal_type_snack
-    MealType.BEVERAGE -> UiR.string.meal_type_beverage
-    MealType.OTHER -> UiR.string.meal_type_other
-}

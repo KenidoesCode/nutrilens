@@ -9,24 +9,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.nutrilens.core.designsystem.R as UiR
 import com.nutrilens.core.designsystem.component.EatingWindowBar
 import com.nutrilens.core.designsystem.component.EmptyEatingWindowBar
 import com.nutrilens.core.designsystem.component.NutriLensCard
+import com.nutrilens.core.designsystem.format.asHoursAndMinutes
+import com.nutrilens.core.designsystem.format.asWholeGrams
+import com.nutrilens.core.designsystem.format.label
 import com.nutrilens.core.designsystem.theme.Dimens
 import com.nutrilens.core.designsystem.theme.NutriLensTheme
 import com.nutrilens.core.model.EatingWindow
 import com.nutrilens.core.model.Meal
-import com.nutrilens.core.model.repository.SyncStatus
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
@@ -91,8 +91,8 @@ fun EatingWindowCard(
                         UiR.string.window_content_description,
                         first.format(timeFormatter),
                         last.format(timeFormatter),
-                        eating.format(),
-                        fasting.format(),
+                        eating.asHoursAndMinutes(),
+                        fasting.asHoursAndMinutes(),
                     ),
                     modifier = Modifier.padding(vertical = Dimens.spaceMedium),
                 )
@@ -107,11 +107,11 @@ fun EatingWindowCard(
                 )
                 MetricRow(
                     label = stringResource(UiR.string.window_eating_window),
-                    value = eating.format(),
+                    value = eating.asHoursAndMinutes(),
                 )
                 MetricRow(
                     label = stringResource(UiR.string.window_fasting_period),
-                    value = fasting.format(),
+                    value = fasting.asHoursAndMinutes(),
                 )
                 MetricRow(
                     label = stringResource(UiR.string.window_meals),
@@ -149,9 +149,9 @@ fun MealSummaryRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val mealTypeLabel = stringResource(meal.mealType.labelRes())
+    val mealTypeLabel = meal.mealType.label()
     val time = meal.localDateTime.toLocalTime().format(timeFormatter)
-    val mass = formatGrams(meal.totalMassGrams)
+    val mass = meal.totalMassGrams.asWholeGrams()
 
     NutriLensCard(
         modifier = modifier
@@ -195,43 +195,6 @@ fun MealSummaryRow(
     }
 }
 
-/**
- * The sync state, in plain language.
- *
- * "3 meals waiting to upload" answers the user's real question -- is my data
- * safe -- in a way an indeterminate spinner does not.
- */
-@Composable
-fun SyncStatusRow(
-    status: SyncStatus,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    NutriLensCard(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = if (status.pendingCount == 1) {
-                    stringResource(UiR.string.sync_pending, status.pendingCount)
-                } else {
-                    stringResource(UiR.string.sync_pending_plural, status.pendingCount)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Start,
-            )
-            TextButton(
-                onClick = onRetry,
-                modifier = Modifier.defaultMinSize(minHeight = Dimens.minimumTouchTarget),
-            ) {
-                Text(stringResource(UiR.string.sync_retry_now))
-            }
-        }
-    }
-}
-
 // --- formatting ----------------------------------------------------------
 
 private val timeFormatter: DateTimeFormatter =
@@ -242,26 +205,6 @@ private val dayFormatter: DateTimeFormatter =
 
 private fun LocalTime.toFractionOfDay(): Float =
     (hour * 60 + minute) / (24f * 60f)
-
-@Composable
-private fun Duration.format(): String = stringResource(
-    UiR.string.window_duration_hours_minutes,
-    toHours().toInt(),
-    (toMinutes() % 60).toInt(),
-)
-
-/** Round to whole grams: an estimate does not warrant decimal places. */
-private fun formatGrams(value: Double?): String =
-    value?.let { Math.round(it).toString() } ?: "0"
-
-private fun com.nutrilens.core.model.MealType.labelRes(): Int = when (this) {
-    com.nutrilens.core.model.MealType.BREAKFAST -> UiR.string.meal_type_breakfast
-    com.nutrilens.core.model.MealType.LUNCH -> UiR.string.meal_type_lunch
-    com.nutrilens.core.model.MealType.DINNER -> UiR.string.meal_type_dinner
-    com.nutrilens.core.model.MealType.SNACK -> UiR.string.meal_type_snack
-    com.nutrilens.core.model.MealType.BEVERAGE -> UiR.string.meal_type_beverage
-    com.nutrilens.core.model.MealType.OTHER -> UiR.string.meal_type_other
-}
 
 @Preview(showBackground = true)
 @Composable
